@@ -8,13 +8,13 @@ import kotlinx.android.synthetic.main.activity_counter.*
 import kotlinx.coroutines.launch
 
 class CounterActivity : AppCompatActivity() {
-    private lateinit var scopedStore: Store<Int, CounterAction>
+    private lateinit var scopedStore: Store<CounterState, CounterAction>
 
     init {
         lifecycleScope.launch {
             whenCreated {
                 scopedStore = TCApp.store.scope(
-                    toLocalState = { globalState -> globalState.counter },
+                    toLocalState = { globalState -> globalState.counterState },
                     fromLocalAction = { localAction -> AppAction.Counter(localAction) }
                 )
                 scopedStore.observe { state ->
