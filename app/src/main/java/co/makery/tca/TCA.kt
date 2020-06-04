@@ -6,9 +6,10 @@ import arrow.optics.Lens
 import arrow.optics.Prism
 import arrow.optics.optics
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -16,15 +17,51 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flattenConcat
+import kotlinx.coroutines.flow.flattenMerge
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
-typealias ReducerResult<State, Action> = Pair<State, Effect<Action, Nothing>>
+private val mutex = Mutex()
+private val cancellationJobs: MutableMap<Any, MutableList<Job>> = mutableMapOf()
+
+private suspend fun cancelJobs(id: Any?, current: Job? = null) {
+    mutex.withLock {
+        val jobs = cancellationJobs[id]
+        if (jobs != null) {
+            jobs.removeIf {
+                val isCurrent = it == current
+                if (!isCurrent) {
+                    it.cancel()
+                }
+                !isCurrent
+            }
+            if (jobs.isEmpty()) {
+                cancellationJobs.remove(id)
+            }
+        }
+    }
+}
+
+private suspend fun removeJob(id: Any?, job: Job?) {
+    mutex.withLock {
+        val jobs = cancellationJobs[id]
+        if (jobs != null) {
+            jobs.remove(job)
+            if (jobs.isEmpty()) {
+                cancellationJobs.remove(id)
+            }
+        }
+    }
+}
+
+data class ReducerResult<out State, Action>(val state: State, val effect: Effect<Action>)
 
 typealias ReducerFn<State, Action, Environment> = (State, Action, Environment) -> ReducerResult<State, Action>
 typealias ReducerNoEnvFn<State, Action> = (State, Action) -> ReducerResult<State, Action>
@@ -39,11 +76,11 @@ class Reducer<State, Action, Environment>(
 
         fun <State, Action, Environment> combine(vararg reducers: Reducer<State, Action, Environment>) =
             Reducer<State, Action, Environment> { value, action, environment ->
-                reducers.fold(Pair(value, Effect.none())) { result, reducer ->
+                reducers.fold(ReducerResult(value, Effect.none())) { result, reducer ->
                     val (currentValue, currentEffect) = result
                     val (newValue, newEffect) = reducer.run(currentValue, action, environment)
                     currentEffect.merge(newEffect)
-                    Pair(newValue, currentEffect)
+                    ReducerResult(newValue, currentEffect)
                 }
             }
     }
@@ -63,14 +100,14 @@ class Reducer<State, Action, Environment>(
     ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
         Reducer { globalState, globalAction, globalEnvironment ->
             toLocalAction.getOption(globalAction).fold(
-                { Pair(globalState, Effect.none()) },
+                { ReducerResult(globalState, Effect.none()) },
                 { localAction ->
                     val (state, effect) = reducer(
                         toLocalState.get(globalState),
                         localAction,
                         toLocalEnvironment(globalEnvironment)
                     )
-                    Pair(
+                    ReducerResult(
                         toLocalState.set(globalState, state),
                         effect.map(toLocalAction::reverseGet)
                     )
@@ -80,43 +117,87 @@ class Reducer<State, Action, Environment>(
 
     fun optional(): Reducer<State?, Action, Environment> = Reducer { state, action, environment ->
         if (state == null) {
-            Pair(state, Effect.none())
+            ReducerResult(state, Effect.none())
         } else {
             reducer(state, action, environment)
         }
     }
 }
 
-class Effect<Output, Failure : Throwable>(private var flow: Flow<Output>) {
+
+class Effect<Output>(private var flow: Flow<Output>) {
 
     companion object {
-        fun <Output> none() = Effect<Output, Nothing>(emptyFlow())
+        fun <Output> none() = Effect<Output>(emptyFlow())
+
+        fun <Output> cancel(id: Any) = Effect<Output>(flow { cancelJobs(id) })
     }
 
-    fun <T> map(transform: (Output) -> T): Effect<T, Failure> {
-        return Effect(flow.map { transform(it) })
+    var cancellationId: Any? = null
+        private set
+
+    var cancelInFlight: Boolean = false
+        private set
+
+    fun <T> map(transform: (Output) -> T): Effect<T> {
+        val effect = Effect(flow.map { transform(it) })
+        matchCancellation(effect)
+        return effect
     }
 
-    fun merge(effect: Effect<Output, Failure>) {
-        flow = flowOf(flow, effect.flow).flattenConcat()
+    fun concatenate(vararg effects: Effect<Output>) {
+        matchSelfCancellation(effects)
+        flow = flowOf(flow, *effects.map { it.flow }.toTypedArray()).flattenConcat()
     }
 
-    suspend fun sink(): List<Output> = coroutineScope {
+    fun merge(vararg effects: Effect<Output>) {
+        matchSelfCancellation(effects)
+        flow = flowOf(flow, *effects.map { it.flow }.toTypedArray()).flattenMerge()
+    }
+
+    fun cancellable(id: Any, inFlight: Boolean = false): Effect<Output> = apply {
+        cancellationId = id
+        cancelInFlight = inFlight
+    }
+
+    suspend fun sink(): List<Output> {
         val outputs = mutableListOf<Output>()
         flow.toList(outputs)
-        outputs
+        return outputs
+    }
+
+    private fun matchCancellation(effect: Effect<*>) {
+        if (cancellationId != null) {
+            effect.cancellationId = cancellationId
+            effect.cancelInFlight = cancelInFlight
+        }
+    }
+
+    private fun matchSelfCancellation(effects: Array<out Effect<*>>) {
+        if (cancellationId == null) {
+            val cancellableEffect = effects.find { it.cancellationId != null }
+            cancellationId = cancellableEffect?.cancellationId
+            cancelInFlight = cancellableEffect?.cancelInFlight ?: false
+        }
     }
 }
 
-fun <State, Output> State.withNoEffect() = Pair(this, Effect.none<Output>())
+fun <State, Output> State.cancel(id: Any) =
+    ReducerResult(this, Effect.cancel<Output>(id))
 
-fun <State, Output, Failure : Throwable> State.withEffect(block: suspend FlowCollector<Output>.() -> Unit) =
-    Pair(this, Effect<Output, Failure>(flow(block)))
+fun <State, Output> State.withNoEffect() =
+    ReducerResult(this, Effect.none<Output>())
+
+fun <State, Output> State.withEffect(block: suspend FlowCollector<Output>.() -> Unit) =
+    ReducerResult(this, Effect(flow(block)))
+
+fun <State, Output> ReducerResult<State, Output>.cancellable(id: Any, inFlight: Boolean = false) =
+    apply { effect.cancellable(id, inFlight) }
 
 class Store<State, Action>(
     initialState: State,
     val reducer: ReducerNoEnvFn<State, Action>,
-    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher
 ) {
     private val mutableState = MutableStateFlow(initialState)
 
@@ -156,24 +237,38 @@ class Store<State, Action>(
 
     fun send(action: Action) {
         val (newState, effect) = reducer(mutableState.value, action)
-        GlobalScope.launch {
+        val cancellationId = effect.cancellationId
+
+        var job: Job? = null
+        job = GlobalScope.launch(Dispatchers.Unconfined, start = CoroutineStart.LAZY) {
             try {
+                if (effect.cancelInFlight) {
+                    cancelJobs(cancellationId, job)
+                }
                 val actions = effect.sink()
-                withContext(mainDispatcher) {
-                    actions.forEach { send(it) }
+                if (actions.isNotEmpty()) {
+                    withContext(mainDispatcher) {
+                        actions.forEach { send(it) }
+                    }
                 }
             } catch (ex: Exception) {
-                ex.printStackTrace()
+                println("Executing effects failed: ${ex.message}")
+            } finally {
+                if (cancellationId != null) {
+                    removeJob(cancellationId, job)
+                }
             }
         }
+        if (cancellationId != null) {
+            cancellationJobs.getOrPut(cancellationId) { mutableListOf() }.add(job)
+        }
+        job.start()
+
         mutableState.value = newState
     }
 
-    suspend fun observe(observer: (State) -> Unit) = coroutineScope {
-        launch(Dispatchers.Unconfined) {
-            mutableState.collect { state -> observer(state) }
-        }
-    }
+    suspend fun observe(observer: (State) -> Unit) =
+        mutableState.collect { state -> observer(state) }
 }
 
 class AppEnvironment
@@ -185,6 +280,7 @@ sealed class AppAction {
 sealed class CounterAction {
     object Increment : CounterAction()
     object Noop : CounterAction()
+    object Cancel : CounterAction()
 
     companion object {
         val prism: Prism<AppAction, CounterAction> = Prism(
@@ -217,11 +313,15 @@ data class AppState(val counterState: CounterState = CounterState()) {
 val counterReducer =
     Reducer<CounterState, CounterAction, AppEnvironment> { state, action, environment ->
         when (action) {
-            CounterAction.Increment -> CounterState.counter.set(state, state.counter + 1)
-                .withEffect {
-                    delay(1000L)
-                    emit(CounterAction.Noop)
-                }
+            CounterAction.Increment -> {
+                CounterState.counter.set(state, state.counter + 1)
+                    .withEffect<CounterState, CounterAction> {
+                        delay(2000L)
+                        emit(CounterAction.Noop)
+                    }
+                    .cancellable("1", inFlight = true)
+            }
+            CounterAction.Cancel -> state.cancel("1")
             else -> state.withNoEffect()
         }
     }
@@ -247,7 +347,7 @@ fun main() {
             initialState = AppState(),
             reducer = appReducer,
             environment = AppEnvironment(),
-            mainDispatcher = Dispatchers.Default
+            mainDispatcher = Dispatchers.Unconfined
         )
 
         launch {
@@ -266,8 +366,10 @@ fun main() {
         delay(500L)
 
         store.send(AppAction.Counter(CounterAction.Increment))
-        store.send(AppAction.Counter(CounterAction.Noop))
-        scopedStore.send(CounterAction.Increment)
+        store.send(AppAction.Counter(CounterAction.Increment))
+        store.send(AppAction.Counter(CounterAction.Increment))
+        delay(1000L)
+        scopedStore.send(CounterAction.Cancel)
 
         println("✅")
     }
