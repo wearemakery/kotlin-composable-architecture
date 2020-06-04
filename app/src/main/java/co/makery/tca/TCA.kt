@@ -5,14 +5,24 @@ import arrow.core.right
 import arrow.optics.Lens
 import arrow.optics.Prism
 import arrow.optics.optics
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flattenConcat
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 
 typealias ReducerResult<State, Action> = Pair<State, Effect<Action, Nothing>>
 
@@ -32,7 +42,7 @@ class Reducer<State, Action, Environment>(
                 reducers.fold(Pair(value, Effect.none())) { result, reducer ->
                     val (currentValue, currentEffect) = result
                     val (newValue, newEffect) = reducer.run(currentValue, action, environment)
-                    // TODO: merge newEffect into currentEffect
+                    currentEffect.merge(newEffect)
                     Pair(newValue, currentEffect)
                 }
             }
@@ -67,24 +77,46 @@ class Reducer<State, Action, Environment>(
                 }
             )
         }
+
+    fun optional(): Reducer<State?, Action, Environment> = Reducer { state, action, environment ->
+        if (state == null) {
+            Pair(state, Effect.none())
+        } else {
+            reducer(state, action, environment)
+        }
+    }
 }
 
-class Effect<Output, Failure : Throwable> {
+class Effect<Output, Failure : Throwable>(private var flow: Flow<Output>) {
+
     companion object {
-        fun <Output> none() = Effect<Output, Nothing>()
+        fun <Output> none() = Effect<Output, Nothing>(emptyFlow())
     }
 
     fun <T> map(transform: (Output) -> T): Effect<T, Failure> {
-        // TODO: dummy implementation
-        return this as Effect<T, Failure>
+        return Effect(flow.map { transform(it) })
+    }
+
+    fun merge(effect: Effect<Output, Failure>) {
+        flow = flowOf(flow, effect.flow).flattenConcat()
+    }
+
+    suspend fun sink(): List<Output> = coroutineScope {
+        val outputs = mutableListOf<Output>()
+        flow.toList(outputs)
+        outputs
     }
 }
 
 fun <State, Output> State.withNoEffect() = Pair(this, Effect.none<Output>())
 
+fun <State, Output, Failure : Throwable> State.withEffect(block: suspend FlowCollector<Output>.() -> Unit) =
+    Pair(this, Effect<Output, Failure>(flow(block)))
+
 class Store<State, Action>(
     initialState: State,
-    val reducer: ReducerNoEnvFn<State, Action>
+    val reducer: ReducerNoEnvFn<State, Action>,
+    val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) {
     private val mutableState = MutableStateFlow(initialState)
 
@@ -92,11 +124,13 @@ class Store<State, Action>(
         operator fun <State, Action, Environment> invoke(
             initialState: State,
             reducer: Reducer<State, Action, Environment>,
-            environment: Environment
+            environment: Environment,
+            mainDispatcher: CoroutineDispatcher = Dispatchers.Main
         ): Store<State, Action> =
             Store(
                 initialState,
-                { state, action: Action -> reducer.run(state, action, environment) }
+                { state, action: Action -> reducer.run(state, action, environment) },
+                mainDispatcher
             )
     }
 
@@ -109,7 +143,8 @@ class Store<State, Action>(
             reducer = { _, localAction ->
                 send(fromLocalAction(localAction))
                 toLocalState(mutableState.value).withNoEffect()
-            }
+            },
+            mainDispatcher = mainDispatcher
         )
         GlobalScope.launch(Dispatchers.Unconfined) {
             mutableState.collect { newValue ->
@@ -121,6 +156,16 @@ class Store<State, Action>(
 
     fun send(action: Action) {
         val (newState, effect) = reducer(mutableState.value, action)
+        GlobalScope.launch {
+            try {
+                val actions = effect.sink()
+                withContext(mainDispatcher) {
+                    actions.forEach { send(it) }
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
+        }
         mutableState.value = newState
     }
 
@@ -134,25 +179,23 @@ class Store<State, Action>(
 class AppEnvironment
 
 sealed class AppAction {
-    object Increment : AppAction()
-    object Decrement : AppAction()
+    class Counter(val action: CounterAction) : AppAction()
 }
 
 sealed class CounterAction {
     object Increment : CounterAction()
+    object Noop : CounterAction()
 
     companion object {
         val prism: Prism<AppAction, CounterAction> = Prism(
             getOrModify = { appAction ->
                 when (appAction) {
-                    AppAction.Increment -> Increment.right()
+                    is AppAction.Counter -> appAction.action.right()
                     else -> appAction.left()
                 }
             },
             reverseGet = { counterAction ->
-                when (counterAction) {
-                    Increment -> AppAction.Increment
-                }
+                AppAction.Counter(counterAction)
             }
         )
     }
@@ -188,12 +231,16 @@ val counterReducer =
     Reducer<CounterState, CounterAction, AppEnvironment> { state, action, environment ->
         when (action) {
             CounterAction.Increment -> CounterState.counter.set(state, state.counter + 1)
-                .withNoEffect()
+                .withEffect {
+                    delay(1000L)
+                    emit(CounterAction.Noop)
+                }
+            else -> state.withNoEffect()
         }
     }
 
 val debugReducer = Reducer<AppState, AppAction, AppEnvironment> { state, action, environment ->
-    println("[${Thread.currentThread().name}] [debug reducer] state=$state")
+    println("[${Thread.currentThread().name}] [debug reducer] action=${action::class.simpleName} state=$state")
     state.withNoEffect()
 }
 
@@ -212,7 +259,8 @@ fun main() {
         val store = Store(
             initialState = AppState(),
             reducer = appReducer,
-            environment = AppEnvironment()
+            environment = AppEnvironment(),
+            mainDispatcher = Dispatchers.Default
         )
 
         launch {
@@ -221,11 +269,7 @@ fun main() {
 
         val scopedStore = store.scope<Int, CounterAction>(
             toLocalState = { globalState -> globalState.counter },
-            fromLocalAction = { localAction ->
-                when (localAction) {
-                    CounterAction.Increment -> AppAction.Increment
-                }
-            }
+            fromLocalAction = { localAction -> AppAction.Counter(localAction) }
         )
 
         launch {
@@ -234,8 +278,8 @@ fun main() {
 
         delay(500L)
 
-        store.send(AppAction.Increment)
-        store.send(AppAction.Decrement)
+        store.send(AppAction.Counter(CounterAction.Increment))
+        store.send(AppAction.Counter(CounterAction.Noop))
         scopedStore.send(CounterAction.Increment)
 
         println("✅")

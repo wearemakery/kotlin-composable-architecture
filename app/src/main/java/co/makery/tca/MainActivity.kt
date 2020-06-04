@@ -17,7 +17,7 @@ class MainActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             delay(5000L)
-            store.send(AppAction.Increment)
+            store.send(AppAction.Counter(CounterAction.Increment))
         }
     }
 }
