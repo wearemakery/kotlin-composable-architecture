@@ -15,11 +15,7 @@ class CounterActivity : AppCompatActivity() {
             whenCreated {
                 scopedStore = TCApp.store.scope(
                     toLocalState = { globalState -> globalState.counter },
-                    fromLocalAction = { localAction ->
-                        when (localAction) {
-                            CounterAction.Increment -> AppAction.Increment
-                        }
-                    }
+                    fromLocalAction = { localAction -> AppAction.Counter(localAction) }
                 )
                 scopedStore.observe { state ->
                     println("[${Thread.currentThread().name}] [scoped store] state=$state")
@@ -34,8 +30,7 @@ class CounterActivity : AppCompatActivity() {
         setContentView(R.layout.activity_counter)
 
         counterIncrementButton.setOnClickListener {
-            // scopedStore.send(CounterAction.Increment)
-            TCApp.store.send(AppAction.Increment)
+            scopedStore.send(CounterAction.Increment)
         }
     }
 }
