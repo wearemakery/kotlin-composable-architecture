@@ -116,7 +116,7 @@ fun <State, Output, Failure : Throwable> State.withEffect(block: suspend FlowCol
 class Store<State, Action>(
     initialState: State,
     val reducer: ReducerNoEnvFn<State, Action>,
-    val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
+    private val mainDispatcher: CoroutineDispatcher = Dispatchers.Main
 ) {
     private val mutableState = MutableStateFlow(initialState)
 
@@ -135,20 +135,20 @@ class Store<State, Action>(
     }
 
     suspend fun <LocalState, LocalAction> scope(
-        toLocalState: (State) -> LocalState,
-        fromLocalAction: (LocalAction) -> Action
+        toLocalState: Lens<State, LocalState>,
+        fromLocalAction: Prism<Action, LocalAction>
     ): Store<LocalState, LocalAction> {
         val localStore = Store<LocalState, LocalAction>(
-            initialState = toLocalState(mutableState.value),
+            initialState = toLocalState.get(mutableState.value),
             reducer = { _, localAction ->
-                send(fromLocalAction(localAction))
-                toLocalState(mutableState.value).withNoEffect()
+                send(fromLocalAction.reverseGet(localAction))
+                toLocalState.get(mutableState.value).withNoEffect()
             },
             mainDispatcher = mainDispatcher
         )
         GlobalScope.launch(Dispatchers.Unconfined) {
             mutableState.collect { newValue ->
-                localStore.mutableState.value = toLocalState(newValue)
+                localStore.mutableState.value = toLocalState.get(newValue)
             }
         }
         return localStore
@@ -206,12 +206,7 @@ data class NestedState(var text: String = "") {
 
 @optics
 data class CounterState(val counter: Int = 0, val nestedState: NestedState = NestedState()) {
-    companion object {
-        val lens: Lens<AppState, CounterState> = Lens(
-            get = { appState -> appState.counterState },
-            set = { appState, counterState -> AppState.counterState.set(appState, counterState) }
-        )
-    }
+    companion object
 }
 
 @optics
@@ -239,7 +234,7 @@ val debugReducer = Reducer<AppState, AppAction, AppEnvironment> { state, action,
 val appReducer: Reducer<AppState, AppAction, AppEnvironment> =
     Reducer.combine(
         counterReducer.pullback(
-            toLocalState = CounterState.lens,
+            toLocalState = AppState.counterState,
             toLocalAction = CounterAction.prism,
             toLocalEnvironment = { env -> env }
         ),
@@ -259,9 +254,9 @@ fun main() {
             store.observe { println("[${Thread.currentThread().name}] [global store] state=$it") }
         }
 
-        val scopedStore = store.scope<CounterState, CounterAction>(
-            toLocalState = { globalState -> globalState.counterState },
-            fromLocalAction = { localAction -> AppAction.Counter(localAction) }
+        val scopedStore = store.scope(
+            toLocalState = AppState.counterState,
+            fromLocalAction = CounterAction.prism
         )
 
         launch {
