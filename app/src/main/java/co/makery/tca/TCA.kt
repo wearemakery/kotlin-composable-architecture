@@ -194,9 +194,7 @@ sealed class CounterAction {
                     else -> appAction.left()
                 }
             },
-            reverseGet = { counterAction ->
-                AppAction.Counter(counterAction)
-            }
+            reverseGet = { counterAction -> AppAction.Counter(counterAction) }
         )
     }
 }
@@ -207,24 +205,18 @@ data class NestedState(var text: String = "") {
 }
 
 @optics
-data class AppState(val counter: Int = 0, val nested: NestedState = NestedState()) {
-    companion object
+data class CounterState(val counter: Int = 0, val nestedState: NestedState = NestedState()) {
+    companion object {
+        val lens: Lens<AppState, CounterState> = Lens(
+            get = { appState -> appState.counterState },
+            set = { appState, counterState -> AppState.counterState.set(appState, counterState) }
+        )
+    }
 }
 
 @optics
-data class CounterState(val counter: Int, val text: String) {
-    companion object {
-        val lens: Lens<AppState, CounterState> = Lens(
-            get = { appState -> CounterState(appState.counter, appState.nested.text) },
-            set = { appState, counterState ->
-                // TODO: ergonomics
-                var state = appState
-                state = AppState.counter.set(state, counterState.counter)
-                state = AppState.nested.text.set(state, counterState.text)
-                state
-            }
-        )
-    }
+data class AppState(val counterState: CounterState = CounterState()) {
+    companion object
 }
 
 val counterReducer =
@@ -267,8 +259,8 @@ fun main() {
             store.observe { println("[${Thread.currentThread().name}] [global store] state=$it") }
         }
 
-        val scopedStore = store.scope<Int, CounterAction>(
-            toLocalState = { globalState -> globalState.counter },
+        val scopedStore = store.scope<CounterState, CounterAction>(
+            toLocalState = { globalState -> globalState.counterState },
             fromLocalAction = { localAction -> AppAction.Counter(localAction) }
         )
 
