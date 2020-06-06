@@ -10,6 +10,8 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
@@ -29,37 +31,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 private val mutex = Mutex()
-private val cancellationJobs: MutableMap<Any, MutableList<Job>> = mutableMapOf()
-
-private suspend fun cancelJobs(id: Any?, current: Job? = null) {
-    mutex.withLock {
-        val jobs = cancellationJobs[id]
-        if (jobs != null) {
-            jobs.removeIf {
-                val isCurrent = it == current
-                if (!isCurrent) {
-                    it.cancel()
-                }
-                !isCurrent
-            }
-            if (jobs.isEmpty()) {
-                cancellationJobs.remove(id)
-            }
-        }
-    }
-}
-
-private suspend fun removeJob(id: Any?, job: Job?) {
-    mutex.withLock {
-        val jobs = cancellationJobs[id]
-        if (jobs != null) {
-            jobs.remove(job)
-            if (jobs.isEmpty()) {
-                cancellationJobs.remove(id)
-            }
-        }
-    }
-}
+private val cancellationJobs: MutableMap<Any, MutableSet<Job>> = mutableMapOf()
 
 data class ReducerResult<out State, Action>(val state: State, val effect: Effect<Action>)
 
@@ -130,55 +102,60 @@ class Effect<Output>(private var flow: Flow<Output>) {
     companion object {
         fun <Output> none() = Effect<Output>(emptyFlow())
 
-        fun <Output> cancel(id: Any) = Effect<Output>(flow { cancelJobs(id) })
+        fun <Output> cancel(id: Any) = Effect<Output>(flow {
+            mutex.withLock {
+                cancellationJobs[id]?.forEach { it.cancel() }
+                cancellationJobs.remove(id)
+            }
+        })
     }
 
-    var cancellationId: Any? = null
-        private set
-
-    var cancelInFlight: Boolean = false
-        private set
-
-    fun <T> map(transform: (Output) -> T): Effect<T> {
-        val effect = Effect(flow.map { transform(it) })
-        matchCancellation(effect)
-        return effect
-    }
+    fun <T> map(transform: (Output) -> T): Effect<T> = Effect(flow.map { transform(it) })
 
     fun concatenate(vararg effects: Effect<Output>) {
-        matchSelfCancellation(effects)
         flow = flowOf(flow, *effects.map { it.flow }.toTypedArray()).flattenConcat()
     }
 
     fun merge(vararg effects: Effect<Output>) {
-        matchSelfCancellation(effects)
         flow = flowOf(flow, *effects.map { it.flow }.toTypedArray()).flattenMerge()
     }
 
-    fun cancellable(id: Any, inFlight: Boolean = false): Effect<Output> = apply {
-        cancellationId = id
-        cancelInFlight = inFlight
-    }
+    fun cancellable(id: Any, cancelInFlight: Boolean = false): Effect<Output> =
+        Effect(flow {
+            if (cancelInFlight) {
+                mutex.withLock {
+                    cancellationJobs[id]?.forEach { it.cancel() }
+                    cancellationJobs.remove(id)
+                }
+            }
+            val outputs = coroutineScope {
+                val deferred = async(
+                    Dispatchers.Unconfined,
+                    start = CoroutineStart.LAZY
+                ) { this@Effect.flow.toList() }
+                mutex.withLock {
+                    cancellationJobs.getOrPut(id) { mutableSetOf() }.add(deferred)
+                }
+                try {
+                    deferred.start()
+                    deferred.await()
+                } finally {
+                    mutex.withLock {
+                        val jobs = cancellationJobs[id]
+                        jobs?.remove(deferred)
+                        if (jobs.isNullOrEmpty()) {
+                            cancellationJobs.remove(id)
+                        }
+                    }
+                }
+            }
+            outputs.forEach { emit(it) }
+        })
 
     suspend fun sink(): List<Output> {
         val outputs = mutableListOf<Output>()
         flow.toList(outputs)
         return outputs
-    }
-
-    private fun matchCancellation(effect: Effect<*>) {
-        if (cancellationId != null) {
-            effect.cancellationId = cancellationId
-            effect.cancelInFlight = cancelInFlight
-        }
-    }
-
-    private fun matchSelfCancellation(effects: Array<out Effect<*>>) {
-        if (cancellationId == null) {
-            val cancellableEffect = effects.find { it.cancellationId != null }
-            cancellationId = cancellableEffect?.cancellationId
-            cancelInFlight = cancellableEffect?.cancelInFlight ?: false
-        }
     }
 }
 
@@ -191,8 +168,10 @@ fun <State, Output> State.withNoEffect() =
 fun <State, Output> State.withEffect(block: suspend FlowCollector<Output>.() -> Unit) =
     ReducerResult(this, Effect(flow(block)))
 
-fun <State, Output> ReducerResult<State, Output>.cancellable(id: Any, inFlight: Boolean = false) =
-    apply { effect.cancellable(id, inFlight) }
+fun <State, Output> ReducerResult<State, Output>.cancellable(
+    id: Any,
+    cancelInFlight: Boolean = false
+) = ReducerResult(state, effect.cancellable(id, cancelInFlight))
 
 class Store<State, Action>(
     initialState: State,
@@ -237,14 +216,9 @@ class Store<State, Action>(
 
     fun send(action: Action) {
         val (newState, effect) = reducer(mutableState.value, action)
-        val cancellationId = effect.cancellationId
 
-        var job: Job? = null
-        job = GlobalScope.launch(Dispatchers.Unconfined, start = CoroutineStart.LAZY) {
+        GlobalScope.launch(Dispatchers.Unconfined) {
             try {
-                if (effect.cancelInFlight) {
-                    cancelJobs(cancellationId, job)
-                }
                 val actions = effect.sink()
                 if (actions.isNotEmpty()) {
                     withContext(mainDispatcher) {
@@ -253,16 +227,8 @@ class Store<State, Action>(
                 }
             } catch (ex: Exception) {
                 println("Executing effects failed: ${ex.message}")
-            } finally {
-                if (cancellationId != null) {
-                    removeJob(cancellationId, job)
-                }
             }
         }
-        if (cancellationId != null) {
-            cancellationJobs.getOrPut(cancellationId) { mutableListOf() }.add(job)
-        }
-        job.start()
 
         mutableState.value = newState
     }
@@ -319,7 +285,7 @@ val counterReducer =
                         delay(2000L)
                         emit(CounterAction.Noop)
                     }
-                    .cancellable("1", inFlight = true)
+                    .cancellable("1", cancelInFlight = true)
             }
             CounterAction.Cancel -> state.cancel("1")
             else -> state.withNoEffect()
@@ -369,7 +335,7 @@ fun main() {
         store.send(AppAction.Counter(CounterAction.Increment))
         store.send(AppAction.Counter(CounterAction.Increment))
         delay(1000L)
-        scopedStore.send(CounterAction.Cancel)
+        // scopedStore.send(CounterAction.Cancel)
 
         println("✅")
     }
