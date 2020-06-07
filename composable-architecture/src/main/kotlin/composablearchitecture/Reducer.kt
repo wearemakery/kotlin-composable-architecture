@@ -57,6 +57,36 @@ class Reducer<State, Action, Environment>(
             )
         }
 
+    // TODO: Implement "IdentifiedArray"
+    fun <GlobalState, GlobalAction, GlobalEnvironment, ID> forEach(
+        toLocalState: Lens<GlobalState, List<State>>,
+        toLocalAction: Prism<GlobalAction, Pair<ID, Action>>,
+        toLocalEnvironment: (GlobalEnvironment) -> Environment,
+        findById: Lens<State, ID>
+    ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
+        Reducer { globalState, globalAction, globalEnvironment ->
+            toLocalAction.getOption(globalAction).fold(
+                { ReducerResult(globalState, Effect.none()) },
+                { (id, localAction) ->
+                    val localState = toLocalState.get(globalState)
+                    val index = localState.indexOfFirst { findById.get(it) == id }
+                    if (index < 0) {
+                        ReducerResult(globalState, Effect.none())
+                    } else {
+                        val (state, effect) = reducer(
+                            localState[index],
+                            localAction,
+                            toLocalEnvironment(globalEnvironment)
+                        )
+                        ReducerResult(
+                            toLocalState.set(globalState, localState.update(index, state)),
+                            effect.map { toLocalAction.reverseGet(id to localAction) }
+                        )
+                    }
+                }
+            )
+        }
+
     fun optional(): Reducer<State?, Action, Environment> = Reducer { state, action, environment ->
         if (state == null) {
             ReducerResult(state, Effect.none())

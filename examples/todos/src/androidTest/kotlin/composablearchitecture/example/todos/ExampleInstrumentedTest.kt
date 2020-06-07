@@ -11,6 +11,6 @@ class ExampleInstrumentedTest {
     @Test
     fun useAppContext() {
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("composablearchitecture.examples.todos", appContext.packageName)
+        assertEquals("composablearchitecture.example.todos", appContext.packageName)
     }
 }

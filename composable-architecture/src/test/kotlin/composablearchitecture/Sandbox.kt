@@ -26,7 +26,7 @@ sealed class CounterAction {
     object Cancel : CounterAction()
 
     companion object {
-        val prism: Prism<AppAction, CounterAction> = PPrism(
+        val prism: Prism<AppAction, CounterAction> = Prism(
             getOrModify = { appAction ->
                 when (appAction) {
                     is AppAction.Counter -> appAction.action.right()
