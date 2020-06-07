@@ -11,7 +11,7 @@ import java.util.UUID
 
 @optics
 data class Todo(
-    var description: String = "",
+    val description: String = "",
     val id: UUID,
     val isComplete: Boolean = false
 ) {
@@ -19,7 +19,7 @@ data class Todo(
 }
 
 sealed class TodoAction {
-    object CheckBoxToggled : TodoAction()
+    class CheckBoxToggled(val checked: Boolean) : TodoAction()
     class TextFieldChanged(val text: String) : TodoAction()
 
     companion object {
@@ -44,7 +44,10 @@ val todoReducer = Reducer<Todo, TodoAction, TodoEnvironment> { todo, action, _ -
             newTodo = Todo.description.set(newTodo, action.text)
             newTodo.withNoEffect()
         }
-        else -> todo.withNoEffect()
+        is TodoAction.CheckBoxToggled ->
+            Todo.isComplete
+                .set(todo, action.checked)
+                .withNoEffect()
     }
 }
 
