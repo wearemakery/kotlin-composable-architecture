@@ -32,9 +32,10 @@ class TodoViewHolder(
 ) : RecyclerView.ViewHolder(binding.root) {
 
     fun bind(newTodo: Todo) {
-        binding.todo = newTodo
-        binding.executePendingBindings()
-        binding.todoItemEditText.setSelection(newTodo.description.length)
+        if (binding.todo != newTodo) {
+            binding.todo = newTodo
+            binding.executePendingBindings()
+        }
     }
 }
 
@@ -71,14 +72,12 @@ class TodoAdapter(
 
     fun descriptionChanged(todo: Todo, editable: Editable) {
         val description = editable.toString()
-        if (todo.description != description) {
-            store.send(todo.id to TodoAction.TextFieldChanged(description))
-        }
+        todo.description = description
+        store.send(todo.id to TodoAction.TextFieldChanged(description))
     }
 
     fun completeChanged(todo: Todo, checked: Boolean) {
-        if (todo.isComplete != checked) {
-            store.send(todo.id to TodoAction.CheckBoxToggled(checked))
-        }
+        todo.isComplete = checked
+        store.send(todo.id to TodoAction.CheckBoxToggled(checked))
     }
 }

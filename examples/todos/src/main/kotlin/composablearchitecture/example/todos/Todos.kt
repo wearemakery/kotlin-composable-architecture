@@ -5,15 +5,18 @@ import arrow.core.right
 import arrow.optics.Prism
 import arrow.optics.optics
 import composablearchitecture.Reducer
+import composablearchitecture.cancellable
 import composablearchitecture.debug
+import composablearchitecture.withEffect
 import composablearchitecture.withNoEffect
+import kotlinx.coroutines.delay
 import java.util.UUID
 
 @optics
 data class Todo(
-    val description: String = "",
+    var description: String = "",
     val id: UUID,
-    val isComplete: Boolean = false
+    var isComplete: Boolean = false
 ) {
     companion object
 }
@@ -40,9 +43,9 @@ object TodoEnvironment
 val todoReducer = Reducer<Todo, TodoAction, TodoEnvironment> { todo, action, _ ->
     when (action) {
         is TodoAction.TextFieldChanged -> {
-            var newTodo = todo
-            newTodo = Todo.description.set(newTodo, action.text)
-            newTodo.withNoEffect()
+            Todo.description
+                .set(todo, action.text)
+                .withNoEffect()
         }
         is TodoAction.CheckBoxToggled ->
             Todo.isComplete
@@ -75,11 +78,16 @@ data class AppState(
             Filter.Active -> todos.filter { !it.isComplete }
             Filter.Completed -> todos.filter { it.isComplete }
         }
+
+    // TODO: keep track of offset and implement smarter sort
+    fun sortCompleted(): List<Todo> =
+        todos.sortedBy { it.isComplete }
 }
 
 sealed class AppAction {
     object AddTodoButtonTapped : AppAction()
     object ClearCompletedButtonTapped : AppAction()
+    object SortCompletedTodos : AppAction()
     class Todo(val id: UUID, val action: TodoAction) : AppAction()
 }
 
@@ -98,6 +106,26 @@ val appReducer = Reducer
                             state.todos.plus(Todo(id = environment.uuid()))
                         )
                         .withNoEffect()
+                }
+                AppAction.SortCompletedTodos -> {
+                    AppState.todos
+                        .set(
+                            state,
+                            state.sortCompleted()
+                        )
+                        .withNoEffect()
+                }
+                is AppAction.Todo -> {
+                    if (action.action is TodoAction.CheckBoxToggled) {
+                        state
+                            .withEffect<AppState, AppAction> {
+                                delay(1000L)
+                                emit(AppAction.SortCompletedTodos)
+                            }
+                            .cancellable("TodoCompletionId", cancelInFlight = true)
+                    } else {
+                        state.withNoEffect()
+                    }
                 }
                 else -> state.withNoEffect()
             }
