@@ -1,8 +1,8 @@
 package composablearchitecture.example.todos
 
+import android.text.Editable
 import android.view.LayoutInflater
 import android.view.ViewGroup
-import androidx.core.widget.doAfterTextChanged
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import composablearchitecture.Store
@@ -24,39 +24,33 @@ private class TodoDiffCallback(
     override fun getNewListSize(): Int = new.size
 
     override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean =
-        old[oldItemPosition].description == new[newItemPosition].description
+        old[oldItemPosition] == new[newItemPosition]
+}
+
+class TodoViewHolder(
+    private val binding: TodoItemBinding
+) : RecyclerView.ViewHolder(binding.root) {
+
+    fun bind(newTodo: Todo) {
+        binding.todo = newTodo
+        binding.executePendingBindings()
+        binding.todoItemEditText.setSelection(newTodo.description.length)
+    }
 }
 
 class TodoAdapter(
     private val store: Store<List<Todo>, Pair<UUID, TodoAction>>,
     lifecycleScope: CoroutineScope
-) :
-    RecyclerView.Adapter<TodoAdapter.TodoViewHolder>() {
+) : RecyclerView.Adapter<TodoViewHolder>() {
 
-    inner class TodoViewHolder(private val binding: TodoItemBinding) :
-        RecyclerView.ViewHolder(binding.root) {
-
-        init {
-            binding.todoItemEditText.doAfterTextChanged { editable ->
-                val todo = binding.todo
-                if (editable != null && todo != null) {
-                    store.send(todo.id to TodoAction.TextFieldChanged(editable.toString()))
-                }
-            }
-        }
-
-        fun bind(todo: Todo) {
-            binding.todo = todo
-        }
-    }
-
-    private var todos: List<Todo> = emptyList()
+    private var todos: MutableList<Todo> = mutableListOf()
 
     init {
         lifecycleScope.launch {
             store.observe { newTodos ->
                 val results = DiffUtil.calculateDiff(TodoDiffCallback(todos, newTodos))
-                todos = newTodos
+                todos.clear()
+                todos.addAll(newTodos)
                 results.dispatchUpdatesTo(this@TodoAdapter)
             }
         }
@@ -65,6 +59,7 @@ class TodoAdapter(
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TodoViewHolder {
         val inflater = LayoutInflater.from(parent.context)
         val binding = TodoItemBinding.inflate(inflater, parent, false)
+        binding.adapter = this
         return TodoViewHolder(binding)
     }
 
@@ -72,5 +67,18 @@ class TodoAdapter(
 
     override fun onBindViewHolder(holder: TodoViewHolder, position: Int) {
         holder.bind(todos[position])
+    }
+
+    fun descriptionChanged(todo: Todo, editable: Editable) {
+        val description = editable.toString()
+        if (todo.description != description) {
+            store.send(todo.id to TodoAction.TextFieldChanged(description))
+        }
+    }
+
+    fun completeChanged(todo: Todo, checked: Boolean) {
+        if (todo.isComplete != checked) {
+            store.send(todo.id to TodoAction.CheckBoxToggled(checked))
+        }
     }
 }
