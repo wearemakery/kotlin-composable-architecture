@@ -53,6 +53,7 @@ class Store<State, Action>(
 
     fun send(action: Action) {
         val (newState, effect) = reducer(mutableState.value, action)
+        mutableState.value = newState
 
         GlobalScope.launch(Dispatchers.Unconfined) {
             try {
@@ -66,8 +67,6 @@ class Store<State, Action>(
                 println("Executing effects failed: ${ex.message}")
             }
         }
-
-        mutableState.value = newState
     }
 
     suspend fun observe(observer: (State) -> Unit) =

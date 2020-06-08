@@ -56,5 +56,8 @@ dependencies {
     implementation(project(":composable-architecture"))
     implementation(project(":composable-architecture-android"))
     kapt("io.arrow-kt:arrow-meta:0.10.5")
+    testImplementation("com.squareup.moshi:moshi-kotlin:1.9.2")
     testImplementation("junit:junit:4.13")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.3.7")
+    testImplementation(project(":composable-architecture-test"))
 }
