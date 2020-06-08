@@ -9,7 +9,10 @@ import composablearchitecture.cancellable
 import composablearchitecture.debug
 import composablearchitecture.withEffect
 import composablearchitecture.withNoEffect
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 @optics
@@ -84,15 +87,18 @@ data class AppState(
         todos.sortedBy { it.isComplete }
 }
 
-sealed class AppAction {
+sealed class AppAction : Comparable<AppAction> {
     object AddTodoButtonTapped : AppAction()
     object ClearCompletedButtonTapped : AppAction()
     object SortCompletedTodos : AppAction()
     class Todo(val id: UUID, val action: TodoAction) : AppAction()
+
+    override fun compareTo(other: AppAction): Int = this.compareTo(other)
 }
 
 class AppEnvironment(
-    val uuid: () -> UUID
+    var asyncDispatcher: CoroutineDispatcher = Dispatchers.Default,
+    var uuid: () -> UUID
 )
 
 val appReducer = Reducer
@@ -119,7 +125,7 @@ val appReducer = Reducer
                     if (action.action is TodoAction.CheckBoxToggled) {
                         state
                             .withEffect<AppState, AppAction> {
-                                delay(1000L)
+                                withContext(environment.asyncDispatcher) { delay(1000L) }
                                 emit(AppAction.SortCompletedTodos)
                             }
                             .cancellable("TodoCompletionId", cancelInFlight = true)
