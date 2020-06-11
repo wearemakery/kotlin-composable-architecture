@@ -82,9 +82,13 @@ data class AppState(
             Filter.Completed -> todos.filter { it.isComplete }
         }
 
-    // TODO: keep track of offset and implement smarter sort
     fun sortCompleted(): List<Todo> =
-        todos.sortedBy { it.isComplete }
+        todos
+            .withIndex()
+            .sortedWith(
+                compareBy<IndexedValue<Todo>> { it.value.isComplete }.thenBy { it.index }
+            )
+            .map { it.value }
 }
 
 sealed class AppAction : Comparable<AppAction> {
@@ -140,7 +144,7 @@ val appReducer = Reducer
             toLocalState = AppState.todos,
             toLocalAction = TodoAction.prism,
             toLocalEnvironment = { TodoEnvironment },
-            findById = Todo.id
+            idGetter = Todo.id.asGetter()
         )
     )
     .debug()
