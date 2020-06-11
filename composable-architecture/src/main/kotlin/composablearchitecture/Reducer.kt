@@ -1,5 +1,6 @@
 package composablearchitecture
 
+import arrow.optics.Getter
 import arrow.optics.Lens
 import arrow.optics.Prism
 
@@ -54,19 +55,41 @@ class Reducer<State, Action, Environment> private constructor(
             )
         }
 
-    // TODO: Implement "IdentifiedArray"
+    fun <GlobalState, GlobalAction, GlobalEnvironment> forEach(
+        toLocalState: Lens<GlobalState, List<State>>,
+        toLocalAction: Prism<GlobalAction, Pair<Int, Action>>,
+        toLocalEnvironment: (GlobalEnvironment) -> Environment
+    ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
+        Reducer { globalState, globalAction, globalEnvironment ->
+            toLocalAction.getOption(globalAction).fold(
+                { Result(globalState, Effect.none()) },
+                { (index, localAction) ->
+                    val localState = toLocalState.get(globalState)
+                    val (state, effect) = reducer(
+                        localState[index],
+                        localAction,
+                        toLocalEnvironment(globalEnvironment)
+                    )
+                    Result(
+                        toLocalState.set(globalState, localState.update(index, state)),
+                        effect.map { toLocalAction.reverseGet(index to localAction) }
+                    )
+                }
+            )
+        }
+
     fun <GlobalState, GlobalAction, GlobalEnvironment, ID> forEach(
         toLocalState: Lens<GlobalState, List<State>>,
         toLocalAction: Prism<GlobalAction, Pair<ID, Action>>,
         toLocalEnvironment: (GlobalEnvironment) -> Environment,
-        findById: Lens<State, ID>
+        idGetter: Getter<State, ID>
     ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
         Reducer { globalState, globalAction, globalEnvironment ->
             toLocalAction.getOption(globalAction).fold(
                 { Result(globalState, Effect.none()) },
                 { (id, localAction) ->
                     val localState = toLocalState.get(globalState)
-                    val index = localState.indexOfFirst { findById.get(it) == id }
+                    val index = localState.indexOfFirst { idGetter.get(it) == id }
                     if (index < 0) {
                         Result(globalState, Effect.none())
                     } else {
