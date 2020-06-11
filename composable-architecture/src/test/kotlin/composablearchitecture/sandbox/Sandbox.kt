@@ -1,10 +1,16 @@
-package composablearchitecture
+package composablearchitecture.sandbox
 
 import arrow.core.left
 import arrow.core.right
 import arrow.optics.Prism
 import arrow.optics.optics
+import composablearchitecture.Reducer
+import composablearchitecture.Store
+import composablearchitecture.cancel
+import composablearchitecture.cancellable
 import composablearchitecture.test.TestStore
+import composablearchitecture.withEffect
+import composablearchitecture.withNoEffect
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -36,7 +42,11 @@ sealed class CounterAction : Comparable<CounterAction> {
                     else -> appAction.left()
                 }
             },
-            reverseGet = { counterAction -> AppAction.Counter(counterAction) }
+            reverseGet = { counterAction ->
+                AppAction.Counter(
+                    counterAction
+                )
+            }
         )
     }
 
@@ -62,7 +72,10 @@ val counterReducer =
     Reducer<CounterState, CounterAction, CounterEnvironment> { state, action, environment ->
         when (action) {
             CounterAction.Increment -> {
-                CounterState.counter.set(state, state.counter + 1)
+                CounterState.counter.set(
+                    state,
+                    state.counter + 1
+                )
                     .withEffect<CounterState, CounterAction> {
                         withContext(environment.asyncDispatcher) { delay(2000L) }
                         emit(CounterAction.Noop)
@@ -105,20 +118,22 @@ class AppEnvironment {
 }
 
 val appReducer =
-    Reducer
-        .combine<AppState, AppAction, AppEnvironment>(
-            Reducer { state, action, _ ->
-                when (action) {
-                    AppAction.Reset ->
-                        AppState.counterState.counter.set(state, 0).withNoEffect()
-                    else -> state.withNoEffect()
-                }
-            },
-            counterReducer.pullback(
-                AppState.counterState,
-                CounterAction.prism
-            ) { environment -> environment.counterEnvironment }
-        )
+    Reducer.combine<AppState, AppAction, AppEnvironment>(
+        Reducer { state, action, _ ->
+            when (action) {
+                AppAction.Reset ->
+                    AppState.counterState.counter.set(
+                        state,
+                        0
+                    ).withNoEffect()
+                else -> state.withNoEffect()
+            }
+        },
+        counterReducer.pullback(
+            AppState.counterState,
+            CounterAction.prism
+        ) { environment -> environment.counterEnvironment }
+    )
 
 fun main() {
     runBlocking {
@@ -127,25 +142,55 @@ fun main() {
         val testStore = TestStore(
             AppState(),
             appReducer,
-            AppEnvironment { counterEnvironment.asyncDispatcher = testDispatcher },
+            AppEnvironment {
+                counterEnvironment.asyncDispatcher = testDispatcher
+            },
             testDispatcher
         )
 
         testStore.assert {
-            send(AppAction.Counter(CounterAction.Increment)) {
-                AppState(CounterState(counter = 1))
+            send(
+                AppAction.Counter(
+                    CounterAction.Increment
+                )
+            ) {
+                AppState(
+                    CounterState(
+                        counter = 1
+                    )
+                )
             }
-            send(AppAction.Counter(CounterAction.Increment)) {
-                AppState(CounterState(counter = 2))
+            send(
+                AppAction.Counter(
+                    CounterAction.Increment
+                )
+            ) {
+                AppState(
+                    CounterState(
+                        counter = 2
+                    )
+                )
             }
             send(AppAction.Reset) {
-                AppState(CounterState(counter = 0))
+                AppState(
+                    CounterState(
+                        counter = 0
+                    )
+                )
             }
             doBlock {
                 testDispatcher.advanceTimeBy(2000L)
             }
-            receive(AppAction.Counter(CounterAction.Noop)) {
-                AppState(CounterState(counter = 0))
+            receive(
+                AppAction.Counter(
+                    CounterAction.Noop
+                )
+            ) {
+                AppState(
+                    CounterState(
+                        counter = 0
+                    )
+                )
             }
         }
 
@@ -177,9 +222,21 @@ fun main() {
             }
         }
 
-        store.send(AppAction.Counter(CounterAction.Increment))
-        store.send(AppAction.Counter(CounterAction.Increment))
-        store.send(AppAction.Counter(CounterAction.Increment))
+        store.send(
+            AppAction.Counter(
+                CounterAction.Increment
+            )
+        )
+        store.send(
+            AppAction.Counter(
+                CounterAction.Increment
+            )
+        )
+        store.send(
+            AppAction.Counter(
+                CounterAction.Increment
+            )
+        )
 
         testDispatcher.advanceTimeBy(2000L)
 
