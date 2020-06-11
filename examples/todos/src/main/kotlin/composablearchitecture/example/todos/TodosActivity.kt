@@ -3,19 +3,28 @@ package composablearchitecture.example.todos
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.databinding.DataBindingUtil
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.LinearLayoutManager
-import composablearchitecture.Store
+import composablearchitecture.android.ScopedViewModel
 import composablearchitecture.example.todos.databinding.TodosActivityBinding
-import kotlinx.coroutines.launch
 import java.util.UUID
 
-class TodosActivityViewModel : ViewModel()
+class TodosActivityViewModel : ScopedViewModel<List<Todo>, Pair<UUID, TodoAction>>() {
+    val onDescriptionChange: (Todo, String) -> Unit = { todo, description ->
+        store.send(todo.id to TodoAction.TextFieldChanged(description))
+    }
+
+    val onCompleteChange: (Todo, Boolean) -> Unit = { todo, complete ->
+        store.send(todo.id to TodoAction.CheckBoxToggled(complete))
+    }
+}
 
 class TodosActivity : AppCompatActivity() {
+
+    private val vm by viewModels<TodosActivityViewModel>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,16 +33,23 @@ class TodosActivity : AppCompatActivity() {
             .setContentView<TodosActivityBinding>(this, R.layout.todos_activity)
         binding.lifecycleOwner = this
 
-        lifecycleScope.launch {
-            val scopedStore: Store<List<Todo>, Pair<UUID, TodoAction>> = TodosApp.store.scope(
-                toLocalState = AppState.todos,
-                fromLocalAction = TodoAction.prism
-            )
-            val todoAdapter = TodoAdapter(scopedStore, lifecycleScope)
-            binding.todosRecyclerView.apply {
-                layoutManager = LinearLayoutManager(context)
-                adapter = todoAdapter
-            }
+        vm.launch(
+            TodosApp.store,
+            AppState.todos,
+            TodoAction.prism
+        )
+            .invokeOnCompletion { println("TodosActivityViewModel is disposed $it") }
+
+        val todoAdapter = TodoAdapter(
+            vm.onDescriptionChange,
+            vm.onCompleteChange
+        )
+
+        vm.state.observe(this, Observer { todos -> todoAdapter.update(todos) })
+
+        binding.todosRecyclerView.apply {
+            layoutManager = LinearLayoutManager(context)
+            adapter = todoAdapter
         }
     }
 

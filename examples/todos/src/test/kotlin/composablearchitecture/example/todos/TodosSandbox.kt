@@ -3,6 +3,7 @@ package composablearchitecture.example.todos
 import composablearchitecture.Store
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
@@ -21,7 +22,7 @@ fun main() {
         )
 
         launch(Dispatchers.Unconfined) {
-            store.observe { println(it) }
+            store.states.collect { println(it) }
         }
 
         delay(500L)

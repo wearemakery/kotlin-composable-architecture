@@ -2,9 +2,13 @@ package composablearchitecture
 
 import arrow.optics.Lens
 import arrow.optics.Prism
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
@@ -16,6 +20,13 @@ class Store<State, Action> private constructor(
     private val mainDispatcher: CoroutineDispatcher
 ) {
     private val mutableState = MutableStateFlow(initialState)
+
+    private var job: Job? = null
+
+    val states: Flow<State> = mutableState
+
+    val currentState: State
+        get() = mutableState.value
 
     companion object {
         operator fun <State, Action, Environment> invoke(
@@ -31,9 +42,10 @@ class Store<State, Action> private constructor(
             )
     }
 
-    suspend fun <LocalState, LocalAction> scope(
+    fun <LocalState, LocalAction> scope(
         toLocalState: Lens<State, LocalState>,
-        fromLocalAction: Prism<Action, LocalAction>
+        fromLocalAction: Prism<Action, LocalAction>,
+        coroutineScope: CoroutineScope
     ): Store<LocalState, LocalAction> {
         val localStore = Store<LocalState, LocalAction>(
             initialState = toLocalState.get(mutableState.value),
@@ -43,7 +55,7 @@ class Store<State, Action> private constructor(
             },
             mainDispatcher = mainDispatcher
         )
-        GlobalScope.launch(Dispatchers.Unconfined) {
+        localStore.job = coroutineScope.launch(Dispatchers.Unconfined) {
             mutableState.collect { newValue ->
                 localStore.mutableState.value = toLocalState.get(newValue)
             }
@@ -52,6 +64,8 @@ class Store<State, Action> private constructor(
     }
 
     fun send(action: Action) {
+        require(Thread.currentThread().name == "main") { "Sending actions from background threads is not allowed" }
+
         val (newState, effect) = reducer(mutableState.value, action)
         mutableState.value = newState
 
@@ -63,12 +77,13 @@ class Store<State, Action> private constructor(
                         actions.forEach { send(it) }
                     }
                 }
-            } catch (ex: Exception) {
-                println("Executing effects failed: ${ex.message}")
+            } catch (ex: CancellationException) {
+                // Ignore
             }
         }
     }
 
-    suspend fun observe(observer: (State) -> Unit) =
-        mutableState.collect { state -> observer(state) }
+    fun cancel() {
+        job?.cancel()
+    }
 }

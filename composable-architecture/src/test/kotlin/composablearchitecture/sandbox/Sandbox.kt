@@ -14,6 +14,7 @@ import composablearchitecture.withNoEffect
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -196,52 +197,44 @@ fun main() {
 
         println("✅")
 
-        if (true) return@runBlocking
-
         val store = Store(
             initialState = AppState(),
             reducer = appReducer,
-            environment = AppEnvironment(),
+            environment = AppEnvironment {
+                counterEnvironment = CounterEnvironment {
+                    asyncDispatcher = testDispatcher
+                }
+            },
             mainDispatcher = testDispatcher
         )
 
+        val scopedStore = store.scope(
+            toLocalState = AppState.counterState,
+            fromLocalAction = CounterAction.prism,
+            coroutineScope = this
+        )
+
         val job1 = launch(Dispatchers.Unconfined) {
-            store.observe {
+            store.states.collect {
                 println("[${Thread.currentThread().name}] [global store] state=$it")
             }
         }
 
-        val scopedStore = store.scope(
-            toLocalState = AppState.counterState,
-            fromLocalAction = CounterAction.prism
-        )
-
         val job2 = launch(Dispatchers.Unconfined) {
-            scopedStore.observe {
+            scopedStore.states.collect {
                 println("[${Thread.currentThread().name}] [scoped store] state=$it")
             }
         }
 
-        store.send(
-            AppAction.Counter(
-                CounterAction.Increment
-            )
-        )
-        store.send(
-            AppAction.Counter(
-                CounterAction.Increment
-            )
-        )
-        store.send(
-            AppAction.Counter(
-                CounterAction.Increment
-            )
-        )
+        store.send(AppAction.Counter(CounterAction.Increment))
+        store.send(AppAction.Counter(CounterAction.Increment))
+        store.send(AppAction.Counter(CounterAction.Increment))
 
         testDispatcher.advanceTimeBy(2000L)
 
         job1.cancel()
         job2.cancel()
+        scopedStore.cancel()
 
         println("✅")
     }

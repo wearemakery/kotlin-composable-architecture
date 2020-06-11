@@ -6,21 +6,24 @@ import androidx.lifecycle.viewModelScope
 import arrow.optics.Lens
 import arrow.optics.Prism
 import composablearchitecture.Store
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 
-open class ScopedViewModel<GlobalState, GlobalAction, LocalState, LocalAction>(
-    private val lens: Lens<GlobalState, LocalState>,
-    private val prism: Prism<GlobalAction, LocalAction>
-) : ViewModel() {
+open class ScopedViewModel<State, Action> : ViewModel() {
 
-    val state: MutableLiveData<LocalState> = MutableLiveData()
+    val state: MutableLiveData<State> = MutableLiveData()
 
-    protected lateinit var store: Store<LocalState, LocalAction>
+    protected lateinit var store: Store<State, Action>
 
-    fun start(withStore: Store<GlobalState, GlobalAction>) {
-        viewModelScope.launch {
-            store = withStore.scope(lens, prism)
-            store.observe { state.value = it }
+    fun <GlobalState, GlobalAction> launch(
+        globalStore: Store<GlobalState, GlobalAction>,
+        lens: Lens<GlobalState, State>,
+        prism: Prism<GlobalAction, Action>
+    ): Job {
+        store = globalStore.scope(lens, prism, viewModelScope)
+        return viewModelScope.launch {
+            store.states.collect { state.value = it }
         }
     }
 }

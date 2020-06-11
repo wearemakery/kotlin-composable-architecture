@@ -5,11 +5,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import composablearchitecture.Store
 import composablearchitecture.example.todos.databinding.TodoItemBinding
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import java.util.UUID
 
 private class TodoDiffCallback(
     private val old: List<Todo>,
@@ -40,21 +36,17 @@ class TodoViewHolder(
 }
 
 class TodoAdapter(
-    private val store: Store<List<Todo>, Pair<UUID, TodoAction>>,
-    lifecycleScope: CoroutineScope
+    private val onDescriptionChange: (Todo, String) -> Unit,
+    private val onCompleteChange: (Todo, Boolean) -> Unit
 ) : RecyclerView.Adapter<TodoViewHolder>() {
 
     private var todos: MutableList<Todo> = mutableListOf()
 
-    init {
-        lifecycleScope.launch {
-            store.observe { newTodos ->
-                val results = DiffUtil.calculateDiff(TodoDiffCallback(todos, newTodos))
-                todos.clear()
-                todos.addAll(newTodos)
-                results.dispatchUpdatesTo(this@TodoAdapter)
-            }
-        }
+    fun update(newTodos: List<Todo>) {
+        val results = DiffUtil.calculateDiff(TodoDiffCallback(todos, newTodos))
+        todos.clear()
+        todos.addAll(newTodos)
+        results.dispatchUpdatesTo(this@TodoAdapter)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): TodoViewHolder {
@@ -73,11 +65,11 @@ class TodoAdapter(
     fun descriptionChanged(todo: Todo, editable: Editable) {
         val description = editable.toString()
         todo.description = description
-        store.send(todo.id to TodoAction.TextFieldChanged(description))
+        onDescriptionChange(todo, description)
     }
 
     fun completeChanged(todo: Todo, checked: Boolean) {
         todo.isComplete = checked
-        store.send(todo.id to TodoAction.CheckBoxToggled(checked))
+        onCompleteChange(todo, checked)
     }
 }
