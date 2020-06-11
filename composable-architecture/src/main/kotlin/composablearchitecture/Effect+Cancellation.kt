@@ -53,10 +53,11 @@ fun <Output> Effect.Companion.cancel(id: Any): Effect<Output> = Effect(flow {
     }
 })
 
-fun <State, Output> State.cancel(id: Any): ReducerResult<State, Output> =
-    ReducerResult(this, Effect.cancel(id))
+fun <State, Output> State.cancel(id: Any): Result<State, Output> =
+    Result(this, Effect.cancel(id))
 
-fun <State, Output> ReducerResult<State, Output>.cancellable(
+fun <State, Output> Result<State, Output>.cancellable(
     id: Any,
     cancelInFlight: Boolean = false
-): ReducerResult<State, Output> = ReducerResult(state, effect.cancellable(id, cancelInFlight))
+): Result<State, Output> =
+    Result(state, effect.cancellable(id, cancelInFlight))

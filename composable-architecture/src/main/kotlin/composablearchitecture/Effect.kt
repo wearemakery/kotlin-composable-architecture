@@ -33,9 +33,10 @@ class Effect<Output>(internal var flow: Flow<Output>) {
     }
 }
 
-fun <State, Output> State.withNoEffect(): ReducerResult<State, Output> =
-    ReducerResult(this, Effect.none())
+fun <State, Output> State.withNoEffect(): Result<State, Output> =
+    Result(this, Effect.none())
 
 fun <State, Output> State.withEffect(
     block: suspend FlowCollector<Output>.() -> Unit
-): ReducerResult<State, Output> = ReducerResult(this, Effect(flow(block)))
+): Result<State, Output> =
+    Result(this, Effect(flow(block)))

@@ -10,9 +10,9 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class Store<State, Action>(
+class Store<State, Action> private constructor(
     initialState: State,
-    val reducer: ReducerNoEnvFn<State, Action>,
+    private val reducer: (State, Action) -> Result<State, Action>,
     private val mainDispatcher: CoroutineDispatcher
 ) {
     private val mutableState = MutableStateFlow(initialState)
