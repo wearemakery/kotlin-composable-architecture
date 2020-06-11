@@ -125,12 +125,9 @@ fun main() {
         val testDispatcher = TestCoroutineDispatcher()
 
         val testStore = TestStore(
-            AppState::class.java,
             AppState(),
             appReducer,
-            AppEnvironment {
-                counterEnvironment.asyncDispatcher = testDispatcher
-            },
+            AppEnvironment { counterEnvironment.asyncDispatcher = testDispatcher },
             testDispatcher
         )
 

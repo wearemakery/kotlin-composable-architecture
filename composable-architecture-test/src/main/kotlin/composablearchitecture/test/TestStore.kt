@@ -1,7 +1,5 @@
 package composablearchitecture.test
 
-import com.squareup.moshi.Moshi
-import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import composablearchitecture.Reducer
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -40,18 +38,11 @@ class AssertionBuilder<Action, State, Environment> {
 }
 
 class TestStore<State, Action : Comparable<Action>, Environment>(
-    stateClazz: Class<State>,
     private var state: State,
     private val reducer: Reducer<State, Action, Environment>,
     private val environment: Environment,
-    private val testDispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher(),
-    private val moshiAdapters: List<Any> = emptyList()
+    private val testDispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher()
 ) {
-
-    private val adapter = Moshi.Builder()
-        .apply { moshiAdapters.forEach { add(it) } }
-        .add(KotlinJsonAdapterFactory()).build()
-        .adapter(stateClazz).indent("  ")
 
     fun assert(block: AssertionBuilder<Action, State, Environment>.() -> Unit) {
         val assertion = AssertionBuilder<Action, State, Environment>()
@@ -97,9 +88,9 @@ class TestStore<State, Action : Comparable<Action>, Environment>(
             }
 
             require(state == expectedState) {
-                println(adapter.toJson(state))
+                println(state)
                 println("---vs---")
-                println(adapter.toJson(expectedState))
+                println(expectedState)
                 "Actual and expected states do not match"
             }
         }

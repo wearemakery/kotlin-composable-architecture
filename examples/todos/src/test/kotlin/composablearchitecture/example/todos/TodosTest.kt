@@ -12,15 +12,13 @@ class TodosTest {
         val testDispatcher = TestCoroutineDispatcher()
 
         val store = TestStore(
-            AppState::class.java,
             AppState(),
             appReducer,
             AppEnvironment(
                 asyncDispatcher = testDispatcher,
                 uuid = { UUID.randomUUID() }
             ),
-            testDispatcher,
-            listOf(UUIDAdapter)
+            testDispatcher
         )
 
         store.assert {
