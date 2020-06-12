@@ -6,14 +6,10 @@ import arrow.optics.Prism
 
 data class Result<out State, Action>(val state: State, val effect: Effect<Action>)
 
-class Reducer<State, Action, Environment> private constructor(
+class Reducer<State, Action, Environment>(
     val reducer: (State, Action, Environment) -> Result<State, Action>
 ) {
     companion object {
-        operator fun <State, Action, Environment> invoke(
-            reducer: (State, Action, Environment) -> Result<State, Action>
-        ): Reducer<State, Action, Environment> = Reducer(reducer)
-
         fun <State, Action, Environment> combine(vararg reducers: Reducer<State, Action, Environment>) =
             Reducer<State, Action, Environment> { value, action, environment ->
                 reducers.fold(Result(value, Effect.none())) { result, reducer ->

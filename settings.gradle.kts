@@ -1,7 +1,8 @@
 include(
     ":composable-architecture",
-    ":composable-architecture-test",
     ":composable-architecture-android",
+    ":composable-architecture-test",
+    ":examples:tic-tac-toe",
     ":examples:todos"
 )
 

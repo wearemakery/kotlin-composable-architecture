@@ -21,7 +21,7 @@ class Store<State, Action> private constructor(
 ) {
     private val mutableState = MutableStateFlow(initialState)
 
-    private var job: Job? = null
+    private var scopeCollectionJob: Job? = null
 
     val states: Flow<State> = mutableState
 
@@ -37,7 +37,7 @@ class Store<State, Action> private constructor(
         ): Store<State, Action> =
             Store(
                 initialState,
-                { state, action: Action -> reducer.run(state, action, environment) },
+                { state, action -> reducer.run(state, action, environment) },
                 mainDispatcher
             )
     }
@@ -55,7 +55,7 @@ class Store<State, Action> private constructor(
             },
             mainDispatcher = mainDispatcher
         )
-        localStore.job = coroutineScope.launch(Dispatchers.Unconfined) {
+        localStore.scopeCollectionJob = coroutineScope.launch(Dispatchers.Unconfined) {
             mutableState.collect { newValue ->
                 localStore.mutableState.value = toLocalState.get(newValue)
             }
@@ -84,6 +84,6 @@ class Store<State, Action> private constructor(
     }
 
     fun cancel() {
-        job?.cancel()
+        scopeCollectionJob?.cancel()
     }
 }
