@@ -4,6 +4,6 @@ plugins {
 
 android {
     defaultConfig {
-        applicationId = "composablearchitecture.example.todos"
+        applicationId = "composablearchitecture.example.tictactoe"
     }
 }
