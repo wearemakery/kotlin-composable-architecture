@@ -1,11 +1,10 @@
 package composablearchitecture.example.todos
 
 import composablearchitecture.Store
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestCoroutineDispatcher
 import java.util.UUID
 
 val todos = listOf(
@@ -14,18 +13,16 @@ val todos = listOf(
 
 fun main() {
     runBlocking {
+        val dispatcher = TestCoroutineDispatcher()
+
         val store = Store(
             initialState = AppState(todos = todos),
             reducer = appReducer,
             environment = AppEnvironment(uuid = { UUID.randomUUID() }),
-            mainDispatcher = Dispatchers.Unconfined
+            mainDispatcher = dispatcher
         )
 
-        launch(Dispatchers.Unconfined) {
-            store.states.collect { println(it) }
-        }
-
-        delay(500L)
+        val job = launch(dispatcher) { store.states.collect { println(it) } }
 
         store.send(
             AppAction.Todo(
@@ -34,6 +31,7 @@ fun main() {
             )
         )
 
+        job.cancel()
         println("✅")
     }
 }
