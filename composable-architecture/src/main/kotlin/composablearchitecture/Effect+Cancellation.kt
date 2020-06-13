@@ -1,7 +1,6 @@
 package composablearchitecture
 
 import kotlinx.coroutines.CoroutineStart
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -22,10 +21,7 @@ fun <Output> Effect<Output>.cancellable(id: Any, cancelInFlight: Boolean = false
             }
         }
         val outputs = coroutineScope {
-            val deferred = async(
-                Dispatchers.Unconfined,
-                start = CoroutineStart.LAZY
-            ) { this@cancellable.flow.toList() }
+            val deferred = async(start = CoroutineStart.LAZY) { this@cancellable.flow.toList() }
             mutex.withLock {
                 @Suppress("RemoveExplicitTypeArguments")
                 cancellationJobs.getOrPut(id) { mutableSetOf<Job>() }.add(deferred)

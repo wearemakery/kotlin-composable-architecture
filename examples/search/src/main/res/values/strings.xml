@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Search</string>
+    <string name="read_me">This application demonstrates live-searching with the Composable Architecture. As you type the\nevents are debounced for 300ms, and when you stop typing an API request is made to load\nlocations. Then tapping on a location will load weather.</string>
+    <string name="search_hint">New York, San Francisco, …</string>
+    <string name="credit">Weather API provided by MetaWeather.com</string>
+</resources>

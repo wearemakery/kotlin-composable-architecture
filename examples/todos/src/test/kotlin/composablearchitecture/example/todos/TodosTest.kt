@@ -17,10 +17,7 @@ class TodosTest {
         val store = TestStore(
             appState,
             appReducer,
-            AppEnvironment(
-                asyncDispatcher = testDispatcher,
-                uuid = { UUID.randomUUID() }
-            ),
+            AppEnvironment(uuid = { UUID.randomUUID() }),
             testDispatcher
         )
 
@@ -40,10 +37,7 @@ class TodosTest {
         val store = TestStore(
             AppState(),
             appReducer,
-            AppEnvironment(
-                asyncDispatcher = testDispatcher,
-                uuid = { UUID.randomUUID() }
-            ),
+            AppEnvironment(uuid = { UUID.randomUUID() }),
             testDispatcher
         )
 

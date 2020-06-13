@@ -64,12 +64,14 @@ class Store<State, Action> private constructor(
     }
 
     fun send(action: Action) {
-        require(Thread.currentThread().name == "main") { "Sending actions from background threads is not allowed" }
+        require(Thread.currentThread().name.startsWith("main")) {
+            "Sending actions from background threads is not allowed"
+        }
 
         val (newState, effect) = reducer(mutableState.value, action)
         mutableState.value = newState
 
-        GlobalScope.launch(Dispatchers.Unconfined) {
+        GlobalScope.launch(mainDispatcher) {
             try {
                 val actions = effect.sink()
                 if (actions.isNotEmpty()) {

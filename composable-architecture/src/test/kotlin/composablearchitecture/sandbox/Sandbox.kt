@@ -11,14 +11,11 @@ import composablearchitecture.cancellable
 import composablearchitecture.test.TestStore
 import composablearchitecture.withEffect
 import composablearchitecture.withNoEffect
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.withContext
 
 @optics
 data class NestedState(var text: String = "") {
@@ -54,31 +51,15 @@ sealed class CounterAction : Comparable<CounterAction> {
     override fun compareTo(other: CounterAction): Int = this.compareTo(other)
 }
 
-class CounterEnvironment {
-
-    companion object {
-        operator fun invoke(
-            block: CounterEnvironment.() -> Unit
-        ): CounterEnvironment {
-            val env = CounterEnvironment()
-            env.block()
-            return env
-        }
-    }
-
-    var asyncDispatcher: CoroutineDispatcher = Dispatchers.Default
-}
+class CounterEnvironment
 
 val counterReducer =
     Reducer<CounterState, CounterAction, CounterEnvironment> { state, action, environment ->
         when (action) {
             CounterAction.Increment -> {
-                CounterState.counter.set(
-                    state,
-                    state.counter + 1
-                )
+                state.copy(counter = state.counter + 1)
                     .withEffect<CounterState, CounterAction> {
-                        withContext(environment.asyncDispatcher) { delay(2000L) }
+                        delay(2000L)
                         emit(CounterAction.Noop)
                     }
                     .cancellable("1", cancelInFlight = true)
@@ -104,17 +85,6 @@ sealed class AppAction : Comparable<AppAction> {
 }
 
 class AppEnvironment {
-
-    companion object {
-        operator fun invoke(
-            block: AppEnvironment.() -> Unit
-        ): AppEnvironment {
-            val env = AppEnvironment()
-            env.block()
-            return env
-        }
-    }
-
     var counterEnvironment = CounterEnvironment()
 }
 
@@ -123,10 +93,9 @@ val appReducer =
         Reducer { state, action, _ ->
             when (action) {
                 AppAction.Reset ->
-                    AppState.counterState.counter.set(
-                        state,
-                        0
-                    ).withNoEffect()
+                    AppState.counterState.counter
+                        .set(state, 0)
+                        .withNoEffect()
                 else -> state.withNoEffect()
             }
         },
@@ -143,55 +112,27 @@ fun main() {
         val testStore = TestStore(
             AppState(),
             appReducer,
-            AppEnvironment {
-                counterEnvironment.asyncDispatcher = testDispatcher
-            },
+            AppEnvironment(),
             testDispatcher
         )
 
         testStore.assert {
-            send(
-                AppAction.Counter(
-                    CounterAction.Increment
-                )
-            ) {
-                AppState(
-                    CounterState(
-                        counter = 1
-                    )
-                )
+            send(AppAction.Counter(CounterAction.Increment)) {
+                AppState(CounterState(counter = 1))
             }
-            send(
-                AppAction.Counter(
-                    CounterAction.Increment
-                )
-            ) {
-                AppState(
-                    CounterState(
-                        counter = 2
-                    )
-                )
+            send(AppAction.Counter(CounterAction.Increment)) {
+                AppState(CounterState(counter = 2))
             }
             send(AppAction.Reset) {
-                AppState(
-                    CounterState(
-                        counter = 0
-                    )
-                )
+                AppState(CounterState(counter = 0))
             }
             doBlock {
                 testDispatcher.advanceTimeBy(2000L)
             }
             receive(
-                AppAction.Counter(
-                    CounterAction.Noop
-                )
+                AppAction.Counter(CounterAction.Noop)
             ) {
-                AppState(
-                    CounterState(
-                        counter = 0
-                    )
-                )
+                AppState(CounterState(counter = 0))
             }
         }
 
@@ -200,11 +141,7 @@ fun main() {
         val store = Store(
             initialState = AppState(),
             reducer = appReducer,
-            environment = AppEnvironment {
-                counterEnvironment = CounterEnvironment {
-                    asyncDispatcher = testDispatcher
-                }
-            },
+            environment = AppEnvironment(),
             mainDispatcher = testDispatcher
         )
 
@@ -214,13 +151,13 @@ fun main() {
             coroutineScope = this
         )
 
-        val job1 = launch(Dispatchers.Unconfined) {
+        val job1 = launch(testDispatcher) {
             store.states.collect {
                 println("[${Thread.currentThread().name}] [global store] state=$it")
             }
         }
 
-        val job2 = launch(Dispatchers.Unconfined) {
+        val job2 = launch(testDispatcher) {
             scopedStore.states.collect {
                 println("[${Thread.currentThread().name}] [scoped store] state=$it")
             }

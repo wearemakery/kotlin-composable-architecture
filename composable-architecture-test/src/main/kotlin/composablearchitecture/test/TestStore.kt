@@ -3,6 +3,7 @@ package composablearchitecture.test
 import arrow.optics.Lens
 import arrow.optics.Prism
 import composablearchitecture.Reducer
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineDispatcher
@@ -100,8 +101,8 @@ private constructor(
                 try {
                     val actions = effect.sink()
                     receivedActions.addAll(actions)
-                } catch (ex: Exception) {
-                    println("Executing effects failed: ${ex.message}")
+                } catch (ex: CancellationException) {
+                    // ignore
                 }
             }
         }

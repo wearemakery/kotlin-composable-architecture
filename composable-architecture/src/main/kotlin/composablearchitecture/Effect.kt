@@ -13,6 +13,10 @@ import kotlinx.coroutines.flow.toList
 class Effect<Output>(internal var flow: Flow<Output>) {
 
     companion object {
+        operator fun <Output> invoke(
+            block: suspend FlowCollector<Output>.() -> Unit
+        ): Effect<Output> = Effect(flow(block))
+
         fun <Output> none() = Effect<Output>(emptyFlow())
     }
 
