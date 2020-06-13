@@ -8,8 +8,6 @@ import composablearchitecture.cancel
 import composablearchitecture.cancellable
 import composablearchitecture.withEffect
 import composablearchitecture.withNoEffect
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 
 @optics
@@ -22,16 +20,16 @@ data class SearchState(
     companion object
 }
 
-sealed class SearchAction {
+sealed class SearchAction : Comparable<SearchAction> {
     data class LocationsResponse(val result: Either<Throwable, List<Location>>) : SearchAction()
     data class LocationTapped(val location: Location) : SearchAction()
     data class LocationWeatherResponse(val result: Either<Throwable, LocationWeather>) : SearchAction()
     data class SearchQueryChanged(val query: String) : SearchAction()
+
+    override fun compareTo(other: SearchAction): Int = this.compareTo(other)
 }
 
-class SearchEnvironment {
-    var weatherClient: WeatherClient = LiveWeatherClient()
-}
+class SearchEnvironment(var weatherClient: WeatherClient = LiveWeatherClient())
 
 val searchReducer = Reducer<SearchState, SearchAction, SearchEnvironment> { state, action, environment ->
     when (action) {

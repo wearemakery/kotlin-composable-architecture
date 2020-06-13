@@ -21,7 +21,7 @@
             android:id="@+id/searchInput"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="32dp"
+            android:layout_marginTop="16dp"
             android:drawableStart="@drawable/ic_baseline_search_24"
             android:drawablePadding="16dp"
             android:hint="@string/search_hint" />
@@ -30,7 +30,7 @@
             android:id="@+id/searchResults"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="8dp"
             android:layout_weight="1" />
 
         <Button
@@ -40,6 +40,4 @@
             android:background="@android:color/transparent"
             android:text="@string/credit" />
     </LinearLayout>
-
-    <data></data>
 </layout>

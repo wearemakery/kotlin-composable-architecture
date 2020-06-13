@@ -11,12 +11,12 @@ import kotlinx.coroutines.test.TestCoroutineDispatcher
 internal sealed class Step<Action, State, Environment> {
     class Send<Action, State, Environment>(
         val action: Action,
-        val block: () -> State
+        val block: (State) -> State
     ) : Step<Action, State, Environment>()
 
     class Receive<Action, State, Environment>(
         val action: Action,
-        val block: () -> State
+        val block: (State) -> State
     ) : Step<Action, State, Environment>()
 
     class Environment<Action, State, Environment>(
@@ -32,13 +32,13 @@ class AssertionBuilder<Action, State, Environment>(private val currentState: () 
 
     internal val steps: MutableList<Step<Action, State, Environment>> = mutableListOf()
 
-    fun send(action: Action, block: () -> State) = steps.add(Step.Send(action, block))
+    fun send(action: Action, block: (State) -> State) = steps.add(Step.Send(action, block))
 
-    fun send(action: Action) = steps.add(Step.Send(action, currentState))
+    fun send(action: Action) = steps.add(Step.Send(action, { currentState() }))
 
-    fun receive(action: Action, block: () -> State) = steps.add(Step.Receive(action, block))
+    fun receive(action: Action, block: (State) -> State) = steps.add(Step.Receive(action, block))
 
-    fun receive(action: Action) = steps.add(Step.Receive(action, currentState))
+    fun receive(action: Action) = steps.add(Step.Receive(action, { currentState() }))
 
     fun environment(block: (Environment) -> Unit) = steps.add(Step.Environment(block))
 
@@ -114,14 +114,14 @@ private constructor(
                 is Step.Send<LocalAction, LocalState, Environment> -> {
                     require(receivedActions.isEmpty()) { "Must handle all actions" }
                     runReducer(fromLocalAction.reverseGet(step.action))
-                    expectedState = step.block()
+                    expectedState = step.block(expectedState)
                 }
                 is Step.Receive<LocalAction, LocalState, Environment> -> {
                     require(receivedActions.isNotEmpty()) { "Expected to receive an action, but received none" }
                     val receivedAction = receivedActions.removeFirst()
                     require(step.action == receivedAction) { "Actual and expected actions do not match" }
                     runReducer(fromLocalAction.reverseGet(step.action))
-                    expectedState = step.block()
+                    expectedState = step.block(expectedState)
                 }
                 is Step.Environment<LocalAction, LocalState, Environment> -> {
                     require(receivedActions.isEmpty()) { "Must handle all received actions before performing this work" }

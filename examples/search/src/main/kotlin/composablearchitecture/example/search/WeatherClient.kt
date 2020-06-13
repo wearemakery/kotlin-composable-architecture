@@ -50,9 +50,9 @@ private interface WeatherClientApi {
 
 interface WeatherClient {
 
-    val searchLocation: suspend (String) -> Either<Throwable, List<Location>>
+    var searchLocation: suspend (String) -> Either<Throwable, List<Location>>
 
-    val weather: suspend (Int) -> Either<Throwable, LocationWeather>
+    var weather: suspend (Int) -> Either<Throwable, LocationWeather>
 }
 
 class LiveWeatherClient(executor: ExecutorService? = null) : WeatherClient {
@@ -77,13 +77,13 @@ class LiveWeatherClient(executor: ExecutorService? = null) : WeatherClient {
         httpClient.dispatcher.executorService.shutdown()
     }
 
-    override val searchLocation: suspend (String) -> Either<Throwable, List<Location>> = { query ->
+    override var searchLocation: suspend (String) -> Either<Throwable, List<Location>> = { query ->
         Either.catch {
             weatherClientApi.search(query)
         }
     }
 
-    override val weather: suspend (Int) -> Either<Throwable, LocationWeather> = { id ->
+    override var weather: suspend (Int) -> Either<Throwable, LocationWeather> = { id ->
         Either.catch {
             weatherClientApi.weather(id)
         }
