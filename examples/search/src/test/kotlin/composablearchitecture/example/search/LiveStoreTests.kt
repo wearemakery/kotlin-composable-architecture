@@ -14,9 +14,7 @@ class LiveStoreTests {
     fun `Test store with live weather client`() {
         val dispatcher = TestCoroutineDispatcher()
 
-        val environment = SearchEnvironment().apply {
-            weatherClient = LiveWeatherClient(TestExecutorService())
-        }
+        val environment = SearchEnvironment(weatherClient = LiveWeatherClient(TestExecutorService()))
 
         val store = Store(
             SearchState(),

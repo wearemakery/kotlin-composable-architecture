@@ -26,4 +26,11 @@ open class ScopedViewModel<State, Action> : ViewModel() {
             store.states.collect { state.value = it }
         }
     }
+
+    fun launch(globalStore: Store<State, Action>): Job {
+        store = globalStore
+        return viewModelScope.launch {
+            store.states.collect { state.value = it }
+        }
+    }
 }

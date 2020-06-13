@@ -1,11 +1,16 @@
 package composablearchitecture.example.search
 
 import android.app.Application
+import composablearchitecture.Store
 
 @Suppress("unused")
 class SearchApp : Application() {
 
-    override fun onCreate() {
-        super.onCreate()
+    companion object {
+        val store = Store(
+            SearchState(),
+            searchReducer,
+            SearchEnvironment()
+        )
     }
 }
