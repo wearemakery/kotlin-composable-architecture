@@ -14,7 +14,7 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".SearchActivity"
+            android:name=".ComposeSearchActivity"
             android:windowSoftInputMode="adjustPan">
 
             <intent-filter>

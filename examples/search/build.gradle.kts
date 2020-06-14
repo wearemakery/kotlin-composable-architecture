@@ -1,23 +1,31 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
     id("shared-android")
-    id("org.jetbrains.kotlin.plugin.serialization") version "1.3.72"
 }
 
 android {
     defaultConfig {
         applicationId = "composablearchitecture.example.search"
     }
+    @Suppress("UnstableApiUsage")
+    buildFeatures {
+        compose = true
+    }
+    composeOptions {
+        kotlinCompilerVersion = "1.3.70-dev-withExperimentalGoogleExtensions-20200424"
+        kotlinCompilerExtensionVersion = "0.1.0-dev13"
+    }
 }
 
 dependencies {
-    implementation("com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:0.5.0")
+    implementation("androidx.compose:compose-runtime:0.1.0-dev13")
+    implementation("androidx.ui:ui-layout:0.1.0-dev13")
+    implementation("androidx.ui:ui-material:0.1.0-dev13")
+    implementation("androidx.ui:ui-tooling:0.1.0-dev13")
     implementation("com.squareup.okhttp3:okhttp:4.7.2")
-    implementation("com.squareup.retrofit2:retrofit:2.7.1")
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.20.0")
+    implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
 }
 
-tasks.withType<KotlinCompile>().all {
-    kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.serialization.UnstableDefault"
+configurations.all {
+    resolutionStrategy.force("com.squareup.okhttp3:okhttp:4.7.2")
 }

@@ -50,7 +50,7 @@ dependencies {
     implementation("androidx.appcompat:appcompat:1.1.0")
     implementation("androidx.constraintlayout:constraintlayout:1.1.3")
     implementation("androidx.core:core-ktx:1.3.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-alpha03")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-alpha04")
     implementation("androidx.recyclerview:recyclerview:1.1.0")
     implementation("io.arrow-kt:arrow-optics:0.10.5")
     implementation(project(":composable-architecture"))

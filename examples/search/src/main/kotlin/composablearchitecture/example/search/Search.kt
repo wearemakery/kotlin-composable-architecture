@@ -6,6 +6,7 @@ import composablearchitecture.Reducer
 import composablearchitecture.Result
 import composablearchitecture.cancel
 import composablearchitecture.cancellable
+import composablearchitecture.debug
 import composablearchitecture.withEffect
 import composablearchitecture.withNoEffect
 import kotlinx.coroutines.delay
@@ -38,7 +39,7 @@ val searchReducer = Reducer<SearchState, SearchAction, SearchEnvironment> { stat
         is SearchAction.SearchQueryChanged -> action.handle(state, environment)
         is SearchAction.LocationWeatherResponse -> action.handle(state)
     }
-}
+}.debug()
 
 private fun SearchAction.LocationsResponse.handle(state: SearchState): Result<SearchState, SearchAction> =
     result.fold(
@@ -71,7 +72,7 @@ private fun SearchAction.SearchQueryChanged.handle(
             .copy(locations = emptyList(), locationWeather = null)
             .cancel("SearchLocationId")
     } else {
-        // TODO: implement debounce
+        // TODO: implement debounce to combine delay and cancellable
         newState
             .withEffect<SearchState, SearchAction> {
                 delay(300L)
