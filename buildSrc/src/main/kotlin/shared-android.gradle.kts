@@ -46,7 +46,7 @@ android {
 dependencies {
     androidTestImplementation("androidx.test.espresso:espresso-core:3.2.0")
     androidTestImplementation("androidx.test.ext:junit:1.1.1")
-    implementation("androidx.activity:activity-ktx:1.1.0")
+    implementation("androidx.activity:activity-ktx:1.2.0-alpha06")
     implementation("androidx.appcompat:appcompat:1.1.0")
     implementation("androidx.constraintlayout:constraintlayout:2.0.0-beta6")
     implementation("androidx.core:core-ktx:1.3.0")
