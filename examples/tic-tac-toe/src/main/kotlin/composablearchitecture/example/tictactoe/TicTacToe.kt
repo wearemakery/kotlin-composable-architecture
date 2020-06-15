@@ -40,15 +40,19 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
             } else {
                 val newMatrix = state.board.matrix.copy()
                 newMatrix[action.row][action.column] = state.currentPlayer
-                var newState = state.copy(board = state.board.copy(matrix = newMatrix))
 
-                var newPlayer = newState.currentPlayer
-                if (!newState.board.hasWinner()) {
-                    newPlayer = newPlayer.toggle()
+                val newPlayer = if (!state.board.hasWinner()) {
+                    state.currentPlayer.toggle()
+                } else {
+                    state.currentPlayer
                 }
 
-                newState = newState.copy(currentPlayer = newPlayer)
-                newState.withNoEffect()
+                state
+                    .copy(
+                        board = state.board.copy(matrix = newMatrix),
+                        currentPlayer = newPlayer
+                    )
+                    .withNoEffect()
             }
         }
         is GameAction.PlayAgainButtonTapped -> {
