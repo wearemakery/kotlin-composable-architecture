@@ -48,7 +48,7 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.1.1")
     implementation("androidx.activity:activity-ktx:1.1.0")
     implementation("androidx.appcompat:appcompat:1.1.0")
-    implementation("androidx.constraintlayout:constraintlayout:1.1.3")
+    implementation("androidx.constraintlayout:constraintlayout:2.0.0-beta6")
     implementation("androidx.core:core-ktx:1.3.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.3.0-alpha04")
     implementation("androidx.recyclerview:recyclerview:1.1.0")
