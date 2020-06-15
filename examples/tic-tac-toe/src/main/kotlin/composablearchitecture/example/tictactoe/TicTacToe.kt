@@ -38,17 +38,17 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
             if (state.board.matrix[action.row][action.column] != null || state.board.hasWinner()) {
                 state.withNoEffect()
             } else {
-                val newState = state.copy()
-                newState.board.matrix[action.row][action.column] = state.currentPlayer
+                val newMatrix = state.board.matrix.copy()
+                newMatrix[action.row][action.column] = state.currentPlayer
+                var newState = state.copy(board = state.board.copy(matrix = newMatrix))
 
                 var newPlayer = newState.currentPlayer
                 if (!newState.board.hasWinner()) {
                     newPlayer = newPlayer.toggle()
                 }
 
-                val resultState = newState.copy(currentPlayer = newPlayer)
-                println("### states equal = ${resultState == state}")
-                resultState.withNoEffect()
+                newState = newState.copy(currentPlayer = newPlayer)
+                newState.withNoEffect()
             }
         }
         is GameAction.PlayAgainButtonTapped -> {
@@ -58,7 +58,11 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
 }
     .debug()
 
-data class Board(val matrix: Array<Array<Player?>> = Array(3) { Array<Player?>(3) { null } }) {
+@Suppress("ArrayInDataClass")
+data class Board(
+    val matrix: Array<Array<Player?>> = arrayOf(arrayOfNulls(3), arrayOfNulls(3), arrayOfNulls(3))
+) {
+
     private fun hasWin(player: Player): Boolean {
         val winConditions = arrayOf(
             arrayOf(0, 1, 2), arrayOf(3, 4, 5), arrayOf(6, 7, 8),
