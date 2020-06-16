@@ -15,9 +15,11 @@ enum class Player(val label: String) {
         }
 }
 
-sealed class GameAction {
+sealed class GameAction: Comparable<GameAction> {
     data class CellTapped(val row: Int, val column: Int) : GameAction()
     object PlayAgainButtonTapped : GameAction()
+
+    override fun compareTo(other: GameAction): Int = this.compareTo(other)
 }
 
 object GameEnvironment
@@ -41,7 +43,9 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
                 val newMatrix = state.board.matrix.copy()
                 newMatrix[action.row][action.column] = state.currentPlayer
 
-                val newPlayer = if (!state.board.hasWinner()) {
+                val newBoard = state.board.copy(matrix = newMatrix)
+
+                val newPlayer = if (!newBoard.hasWinner()) {
                     state.currentPlayer.toggle()
                 } else {
                     state.currentPlayer
@@ -49,7 +53,7 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
 
                 state
                     .copy(
-                        board = state.board.copy(matrix = newMatrix),
+                        board = newBoard,
                         currentPlayer = newPlayer
                     )
                     .withNoEffect()
@@ -62,7 +66,6 @@ val gameReducer = Reducer<GameState, GameAction, GameEnvironment> { state, actio
 }
     .debug()
 
-@Suppress("ArrayInDataClass")
 data class Board(
     val matrix: Array<Array<Player?>> = arrayOf(arrayOfNulls(3), arrayOfNulls(3), arrayOfNulls(3))
 ) {
@@ -98,5 +101,20 @@ data class Board(
             |[${matrix[2][0] ?: ""}][${matrix[2][1] ?: ""}][${matrix[2][2] ?: ""}]
             |
     """.trimMargin()
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Board
+
+        if (!matrix.contentDeepEquals(other.matrix)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return matrix.contentDeepHashCode()
     }
 }
