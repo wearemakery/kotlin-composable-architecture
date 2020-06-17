@@ -19,41 +19,19 @@ class TicTacToeTest {
 
         store.assert {
             send(GameAction.CellTapped(0, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[0][0] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(0, 0, Player.X, Player.O)
             }
             send(GameAction.CellTapped(2, 1)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[2][1] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(2, 1, Player.O, Player.X)
             }
             send(GameAction.CellTapped(1, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[1][0] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(1, 0, Player.X, Player.O)
             }
             send(GameAction.CellTapped(1, 1)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[1][1] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(1, 1, Player.O, Player.X)
             }
             send(GameAction.CellTapped(2, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[2][0] = Player.X
-                state.copy(board = state.board.copy(matrix = newMatrix))
+                state.update(2, 0, Player.X, Player.X)
             }
         }
     }
@@ -71,77 +49,41 @@ class TicTacToeTest {
 
         store.assert {
             send(GameAction.CellTapped(0, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[0][0] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(0, 0, Player.X, Player.O)
             }
             send(GameAction.CellTapped(1, 1)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[1][1] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(1, 1, Player.O, Player.X)
             }
             send(GameAction.CellTapped(1, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[1][0] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(1, 0, Player.X, Player.O)
             }
             send(GameAction.CellTapped(2, 0)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[2][0] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(2, 0, Player.O, Player.X)
             }
             send(GameAction.CellTapped(0, 2)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[0][2] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(0, 2, Player.X, Player.O)
             }
             send(GameAction.CellTapped(0, 1)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[0][1] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(0, 1, Player.O, Player.X)
             }
             send(GameAction.CellTapped(2, 1)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[2][1] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(2, 1, Player.X, Player.O)
             }
             send(GameAction.CellTapped(1, 2)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[1][2] = Player.O
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.X
-                )
+                state.update(1, 2, Player.O, Player.X)
             }
             send(GameAction.CellTapped(2, 2)) { state ->
-                val newMatrix = state.board.matrix.copy()
-                newMatrix[2][2] = Player.X
-                state.copy(
-                    board = state.board.copy(matrix = newMatrix),
-                    currentPlayer = Player.O
-                )
+                state.update(2, 2, Player.X, Player.O)
             }
         }
     }
+}
+
+private fun GameState.update(row: Int, column: Int, current: Player, next: Player): GameState {
+    val newMatrix = board.matrix.copy()
+    newMatrix[row][column] = current
+    return copy(
+        board = board.copy(matrix = newMatrix),
+        currentPlayer = next
+    )
 }
