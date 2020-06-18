@@ -1,12 +1,142 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <LinearLayout
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        tools:context=".TicTacToeActivity" />
+        tools:context=".TicTacToeActivity">
 
-    <data></data>
+        <TextView
+            android:id="@+id/statusText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textColor="@android:color/black"
+            android:textSize="20sp"
+            app:layout_constraintBottom_toTopOf="@id/playAgainButton"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <Button
+            android:id="@+id/playAgainButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Play again"
+            android:textColor="@android:color/black"
+            android:textSize="20sp"
+            app:layout_constraintBottom_toTopOf="@id/gridFlow"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="@id/statusText" />
+
+        <androidx.constraintlayout.helper.widget.Flow
+            android:id="@+id/gridFlow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:constraint_referenced_ids="cell00,cell01,cell02,cell10,cell11,cell12,cell20,cell21,cell22"
+            app:flow_horizontalGap="8dp"
+            app:flow_horizontalStyle="packed"
+            app:flow_maxElementsWrap="3"
+            app:flow_verticalGap="8dp"
+            app:flow_wrapMode="aligned"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/cell00"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell01"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell02"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell10"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell11"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell12"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell20"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell21"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+        <TextView
+            android:id="@+id/cell22"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/lightGrey"
+            android:gravity="center"
+            android:textColor="@android:color/black"
+            android:textSize="42sp"
+            tools:ignore="MissingConstraints" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+
 </layout>
