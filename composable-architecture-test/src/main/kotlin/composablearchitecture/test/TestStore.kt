@@ -84,7 +84,9 @@ private constructor(
             fromLocalAction,
             testDispatcher
         )
-
+    
+    @kotlin.ExperimentalStdlibApi
+    @OptIn(kotlin.ExperimentalStdlibApi::class)
     fun assert(block: AssertionBuilder<LocalAction, LocalState, Environment>.() -> Unit) {
         val assertion = AssertionBuilder<LocalAction, LocalState, Environment> {
             toLocalState.get(state)
