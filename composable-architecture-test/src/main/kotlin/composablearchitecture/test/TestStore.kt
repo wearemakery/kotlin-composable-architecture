@@ -112,19 +112,19 @@ private constructor(
 
             when (step) {
                 is Step.Send<LocalAction, LocalState, Environment> -> {
-                    require(receivedActions.isEmpty()) { "Must handle all actions" }
+                    require(receivedActions.isEmpty()) { "Must handle all actions. Unhandled actions:\n" + receivedActions.joinToString(separator = "\n") }
                     runReducer(fromLocalAction.reverseGet(step.action))
                     expectedState = step.block(expectedState)
                 }
                 is Step.Receive<LocalAction, LocalState, Environment> -> {
-                    require(receivedActions.isNotEmpty()) { "Expected to receive an action, but received none" }
+                    require(receivedActions.isNotEmpty()) { "Expected to receive" + receivedActions.joinToString(separator = "\n") + "but received none" }
                     val receivedAction = receivedActions.removeFirst()
                     require(step.action == receivedAction) { "Actual and expected actions do not match" }
                     runReducer(fromLocalAction.reverseGet(step.action))
                     expectedState = step.block(expectedState)
                 }
                 is Step.Environment<LocalAction, LocalState, Environment> -> {
-                    require(receivedActions.isEmpty()) { "Must handle all received actions before performing this work" }
+                    require(receivedActions.isEmpty()) { "Must handle all received actions before performing this work." + receivedActions.joinToString(separator = "\n") + "are not handled" }
                     step.block(environment)
                 }
                 is Step.Do -> step.block()
@@ -139,6 +139,6 @@ private constructor(
             }
         }
 
-        require(receivedActions.isEmpty()) { "Must handle all actions" }
+        require(receivedActions.isEmpty()) { "Must handle all actions. Unhandled actions:\n" + receivedActions.joinToString(separator = "\n") }
     }
 }
