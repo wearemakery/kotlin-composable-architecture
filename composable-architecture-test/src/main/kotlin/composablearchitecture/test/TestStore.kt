@@ -70,6 +70,20 @@ private constructor(
                 Prism.id(),
                 testDispatcher
             )
+        fun <State, Action : Comparable<Action>, Environment> create (
+            state: State,
+            reducer: Reducer<State, Action, Environment>,
+            environment: Environment,
+            testDispatcher: TestCoroutineDispatcher = TestCoroutineDispatcher()
+        ) =
+            TestStore(
+                state,
+                reducer,
+                environment,
+                Lens.id(),
+                Prism.id(),
+                testDispatcher
+            )
     }
 
     fun <S, A> scope(
@@ -119,14 +133,20 @@ private constructor(
                     expectedState = step.block(expectedState)
                 }
                 is Step.Receive<LocalAction, LocalState, Environment> -> {
-                    require(receivedActions.isNotEmpty()) { "Expected to receive" + receivedActions.joinToString(separator = "\n") + "but received none" }
+                    require(receivedActions.isNotEmpty()) {
+                        "Expected to receive" + receivedActions.joinToString(separator = "\n") + "but received none"
+                    }
                     val receivedAction = receivedActions.removeFirst()
-                    require(step.action == receivedAction) { "Actual and expected actions do not match" }
+                    require(step.action == receivedAction) {
+                        "Actual and expected states do not match.\n\n${step.action}\n---vs---\n$receivedAction"
+                    }
                     runReducer(fromLocalAction.reverseGet(step.action))
                     expectedState = step.block(expectedState)
                 }
                 is Step.Environment<LocalAction, LocalState, Environment> -> {
-                    require(receivedActions.isEmpty()) { "Must handle all received actions before performing this work." + receivedActions.joinToString(separator = "\n") + "are not handled" }
+                    require(receivedActions.isEmpty()) {
+                        "Must handle all received actions before performing this work." + receivedActions.joinToString(separator = "\n") + "are not handled"
+                    }
                     step.block(environment)
                 }
                 is Step.Do -> step.block()
@@ -134,13 +154,11 @@ private constructor(
 
             val actualState = toLocalState.get(state)
             require(actualState == expectedState) {
-                println(actualState)
-                println("---vs---")
-                println(expectedState)
-                "Actual and expected states do not match"
+                "Actual and expected states do not match\n\n$actualState\n---vs---\n$expectedState"
             }
         }
 
         require(receivedActions.isEmpty()) { "Must handle all actions. Unhandled actions:\n" + receivedActions.joinToString(separator = "\n") }
     }
 }
+
