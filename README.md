@@ -1,6 +1,6 @@
 # Kotlin Composable Architecture
 
-[![Kotlin](https://img.shields.io/badge/kotlin-1.3.72-orange)](https://kotlinlang.org/docs/tutorials/getting-started.html)
+[![Kotlin](https://img.shields.io/badge/kotlin-1.4.21-orange)](https://kotlinlang.org/docs/tutorials/getting-started.html)
 [![@wearemakery](https://img.shields.io/badge/contact-@wearemakery-blue)](https://twitter.com/wearemakery)
 
 The Kotlin Composable Architecture is a companion library for the amazing [Swift Composable Architecture](https://github.com/pointfreeco/swift-composable-architecture) created by [Point-Free](https://www.pointfree.co/). This implementation tries to mimic the original version's patterns and techniques, but because Swift and Kotlin have some fundamental differences, there are a few alternative design decisions. Eventually, we are aiming to provide the same ergonomics as the Swift implementation and full feature parity.
