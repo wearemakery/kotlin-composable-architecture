@@ -1,3 +1,7 @@
+@file:Suppress("HasPlatformType")
+
+import java.util.Properties
+
 plugins {
     `kotlin-dsl`
     `kotlin-dsl-precompiled-script-plugins`
@@ -5,10 +9,15 @@ plugins {
 
 repositories {
     google()
-    jcenter()    
+    jcenter()
 }
 
+private val properties = Properties().apply { File("gradle.properties").inputStream().use { load(it) } }
+
+val androidToolsBuildVersion = properties.getProperty("androidToolsBuildVersion")
+val kotlinVersion = properties.getProperty("kotlinVersion")
+
 dependencies {
-    implementation("com.android.tools.build:gradle:4.0.0")
-    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:1.3.72")
+    implementation("com.android.tools.build:gradle:$androidToolsBuildVersion")
+    implementation("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
 }

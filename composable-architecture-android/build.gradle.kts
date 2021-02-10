@@ -4,18 +4,13 @@ plugins {
 }
 
 android {
-    compileSdkVersion(29)
-    compileOptions {
-        kotlinOptions {
-            jvmTarget = "1.8"
-        }
-    }
+    compileSdkVersion(androidCompileSdkVersion)
     sourceSets["main"].java.srcDir("src/main/kotlin")
 }
 
 dependencies {
-    implementation("androidx.lifecycle:lifecycle-livedata-ktx:2.2.0")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.2.0")
-    implementation("io.arrow-kt:arrow-optics:0.10.5")
+    implementation("androidx.lifecycle:lifecycle-livedata-ktx:$androidxLifecycleVersion")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:$androidxLifecycleVersion")
+    implementation("io.arrow-kt:arrow-optics:$arrowVersion")
     implementation(project(":composable-architecture"))
 }

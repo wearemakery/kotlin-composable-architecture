@@ -64,7 +64,10 @@ class Store<State, Action> private constructor(
     }
 
     fun send(action: Action) {
-        require(Thread.currentThread().name.startsWith("main")) {
+        val currentThread = Thread.currentThread()
+        require(
+            currentThread.name.startsWith("main") || currentThread.name.contains("Test worker")
+        ) {
             "Sending actions from background threads is not allowed"
         }
 

@@ -9,5 +9,5 @@ android {
 }
 
 dependencies {
-    implementation("androidx.dynamicanimation:dynamicanimation:1.0.0")
+    implementation("androidx.dynamicanimation:dynamicanimation:$androidxDynamicAnimationVersion")
 }
