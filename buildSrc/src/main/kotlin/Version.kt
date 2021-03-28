@@ -1,31 +1,31 @@
-@file:Suppress("HasPlatformType")
-
+import org.gradle.api.Project
 import java.io.File
 import java.util.Properties
 
-private val properties = Properties().apply { File("gradle.properties").inputStream().use { load(it) } }
-
 // Versions
-val androidToolsBuildVersion = properties.getProperty("androidToolsBuildVersion")
-val androidxActivityVersion = properties.getProperty("androidxActivityVersion")
-val androidxAppcompatVersion = properties.getProperty("androidxAppcompatVersion")
-val androidxConstraintLayoutVersion = properties.getProperty("androidxConstraintLayoutVersion")
-val androidxCoreVersion = properties.getProperty("androidxCoreVersion")
-val androidxDynamicAnimationVersion = properties.getProperty("androidxDynamicAnimationVersion")
-val androidxEspressoVersion = properties.getProperty("androidxEspressoVersion")
-val androidxJunitVersion = properties.getProperty("androidxJunitVersion")
-val androidxLifecycleVersion = properties.getProperty("androidxLifecycleVersion")
-val androidxRecyclerviewVersion = properties.getProperty("androidxRecyclerviewVersion")
-val arrowVersion = properties.getProperty("arrowVersion")
-val coroutinesVersion = properties.getProperty("coroutinesVersion")
-val junitVersion = properties.getProperty("junitVersion")
-val kotlinComposeVersion = properties.getProperty("kotlinComposeVersion")
-val kotlinVersion = properties.getProperty("kotlinVersion")
-val moshiVersion = properties.getProperty("moshiVersion")
-val okhttpVersion = properties.getProperty("okhttpVersion")
-val retrofitVersion = properties.getProperty("retrofitVersion")
+val Project.androidToolsBuildVersion: String get() = props.getProperty("androidToolsBuildVersion")
+val Project.androidxActivityVersion: String get() = props.getProperty("androidxActivityVersion")
+val Project.androidxAppcompatVersion: String get() = props.getProperty("androidxAppcompatVersion")
+val Project.androidxConstraintLayoutVersion: String get() = props.getProperty("androidxConstraintLayoutVersion")
+val Project.androidxCoreVersion: String get() = props.getProperty("androidxCoreVersion")
+val Project.androidxDynamicAnimationVersion: String get() = props.getProperty("androidxDynamicAnimationVersion")
+val Project.androidxEspressoVersion: String get() = props.getProperty("androidxEspressoVersion")
+val Project.androidxJunitVersion: String get() = props.getProperty("androidxJunitVersion")
+val Project.androidxLifecycleVersion: String get() = props.getProperty("androidxLifecycleVersion")
+val Project.androidxRecyclerviewVersion: String get() = props.getProperty("androidxRecyclerviewVersion")
+val Project.arrowVersion: String get() = props.getProperty("arrowVersion")
+val Project.coroutinesVersion: String get() = props.getProperty("coroutinesVersion")
+val Project.junitVersion: String get() = props.getProperty("junitVersion")
+val Project.kotlinComposeVersion: String get() = props.getProperty("kotlinComposeVersion")
+val Project.kotlinVersion: String get() = props.getProperty("kotlinVersion")
+val Project.moshiVersion: String get() = props.getProperty("moshiVersion")
+val Project.okhttpVersion: String get() = props.getProperty("okhttpVersion")
+val Project.retrofitVersion: String get() = props.getProperty("retrofitVersion")
 
 // Android
-val androidCompileSdkVersion = properties.getProperty("androidCompileSdkVersion").toInt()
-val androidMinSdkVersion = properties.getProperty("androidMinSdkVersion").toInt()
-val androidTargetSdkVersion = properties.getProperty("androidTargetSdkVersion").toInt()
+val Project.androidCompileSdkVersion: Int get() = props.getProperty("androidCompileSdkVersion").toInt()
+val Project.androidMinSdkVersion: Int get() = props.getProperty("androidMinSdkVersion").toInt()
+val Project.androidTargetSdkVersion: Int get() = props.getProperty("androidTargetSdkVersion").toInt()
+
+private val Project.props: Properties
+    get() = Properties().apply { File(rootDir, "gradle.properties").inputStream().use { load(it) } }

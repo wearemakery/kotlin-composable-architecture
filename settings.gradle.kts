@@ -8,4 +8,4 @@ include(
     ":examples:todos"
 )
 
-rootProject.name = "kotlin-composable-architecture"
+rootProject.name = "composable-architecture"

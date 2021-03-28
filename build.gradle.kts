@@ -26,6 +26,8 @@ allprojects {
 
         kotlinOptions.jvmTarget = "1.8"
     }
+
+    project.version = "0.1.0"
 }
 
 tasks.register<Delete>("clean") {

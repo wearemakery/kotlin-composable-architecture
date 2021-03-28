@@ -12,7 +12,8 @@ repositories {
     jcenter()
 }
 
-private val properties = Properties().apply { File("gradle.properties").inputStream().use { load(it) } }
+private val properties = Properties()
+    .apply { File(rootDir.parentFile, "gradle.properties").inputStream().use { load(it) } }
 
 val androidToolsBuildVersion = properties.getProperty("androidToolsBuildVersion")
 val kotlinVersion = properties.getProperty("kotlinVersion")

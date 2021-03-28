@@ -7,6 +7,25 @@ The Kotlin Composable Architecture is a companion library for the amazing [Swift
 
 ⚠️ **Please note that this repository is a work in progress; there is no stable release available.**
 
+## Getting started
+
+Until there is no stable release available, the easiest way to integrate the library into your project is to use [Gradle's `includeBuild()` feature](https://publicobject.com/2021/03/11/includebuild/).
+
+```kotlin
+// in build.gradle.kts
+implementation("composable-architecture:composable-architecture:0.1.0")
+```
+
+```kotlin
+// in settings.gradle.kts
+includeBuild("<PATH TO kotlin-composable-architecture>") {
+    dependencySubstitution {
+        substitute(module("composable-architecture:composable-architecture"))
+            .with(project(":composable-architecture"))
+    }
+}
+```
+
 ## What is the Composable Architecture?
 
 This library provides a few core tools that can be used to build applications of varying purpose and complexity. It provides compelling stories that you can follow to solve many problems you encounter day-to-day when building applications, such as:
