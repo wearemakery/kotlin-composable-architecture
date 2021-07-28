@@ -35,7 +35,7 @@ class Reducer<State, Action, Environment>(
         toLocalEnvironment: (GlobalEnvironment) -> Environment
     ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
         Reducer { globalState, globalAction, globalEnvironment ->
-            toLocalAction.getOption(globalAction).fold(
+            toLocalAction.getOrModify(globalAction).fold(
                 { Result(globalState, Effect.none()) },
                 { localAction ->
                     val (state, effect) = reducer(
@@ -57,7 +57,7 @@ class Reducer<State, Action, Environment>(
         toLocalEnvironment: (GlobalEnvironment) -> Environment
     ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
         Reducer { globalState, globalAction, globalEnvironment ->
-            toLocalAction.getOption(globalAction).fold(
+            toLocalAction.getOrModify(globalAction).fold(
                 { Result(globalState, Effect.none()) },
                 { (index, localAction) ->
                     val localState = toLocalState.get(globalState)
@@ -81,7 +81,7 @@ class Reducer<State, Action, Environment>(
         idGetter: Getter<State, ID>
     ): Reducer<GlobalState, GlobalAction, GlobalEnvironment> =
         Reducer { globalState, globalAction, globalEnvironment ->
-            toLocalAction.getOption(globalAction).fold(
+            toLocalAction.getOrModify(globalAction).fold(
                 { Result(globalState, Effect.none()) },
                 { (id, localAction) ->
                     val localState = toLocalState.get(globalState)

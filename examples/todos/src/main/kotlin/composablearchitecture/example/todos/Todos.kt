@@ -134,7 +134,7 @@ val appReducer = Reducer
             toLocalState = AppState.todos,
             toLocalAction = TodoAction.prism,
             toLocalEnvironment = { TodoEnvironment },
-            idGetter = Todo.id.asGetter()
+            idGetter = Todo.id
         )
     )
     .debug()

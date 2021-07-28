@@ -3,7 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 buildscript {
     repositories {
         google()
-        jcenter()
+        mavenCentral()
     }
     dependencies {
         classpath("com.android.tools.build:gradle:$androidToolsBuildVersion")
@@ -14,15 +14,13 @@ buildscript {
 allprojects {
     repositories {
         google()
-        jcenter()
-        maven(url = "https://dl.bintray.com/arrow-kt/arrow-kt/")
+        mavenCentral()
     }
 
     tasks.withType<KotlinCompile>().all {
         kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlin.ExperimentalStdlibApi"
         kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.ExperimentalCoroutinesApi"
         kotlinOptions.freeCompilerArgs += "-Xopt-in=kotlinx.coroutines.FlowPreview"
-        kotlinOptions.freeCompilerArgs += "-Xallow-jvm-ir-dependencies"
 
         kotlinOptions.jvmTarget = "1.8"
     }

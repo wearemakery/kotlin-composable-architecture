@@ -1,6 +1,7 @@
 package composablearchitecture.example.search
 
 import arrow.core.Either
+import arrow.core.right
 import java.time.LocalDate
 
 val mockLocations = listOf(
@@ -36,10 +37,10 @@ val mockWeather = listOf(
 class MockWeatherClient : WeatherClient {
 
     override var searchLocation: suspend (String) -> Either<Throwable, List<Location>> = {
-        Either.right(mockLocations)
+        Either.catch { mockLocations }
     }
 
     override var weather: suspend (Int) -> Either<Throwable, LocationWeather> = {
-        Either.right(LocationWeather(mockWeather, 1))
+        Either.catch { LocationWeather(mockWeather, 1) }
     }
 }

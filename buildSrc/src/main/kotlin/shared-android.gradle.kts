@@ -4,18 +4,18 @@ plugins {
     id("kotlin-kapt")
 }
 
+@Suppress("UnstableApiUsage")
 android {
-    compileSdkVersion(androidCompileSdkVersion)
+    compileSdk = androidCompileSdkVersion
 
     defaultConfig {
-        minSdkVersion(androidMinSdkVersion)
-        targetSdkVersion(androidTargetSdkVersion)
+        minSdk = androidMinSdkVersion
+        targetSdk = androidTargetSdkVersion
         versionCode = 1
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    @Suppress("UnstableApiUsage")
     buildFeatures {
         dataBinding = true
         viewBinding = true

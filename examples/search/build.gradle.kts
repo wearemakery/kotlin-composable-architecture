@@ -13,15 +13,13 @@ android {
         renderScript = false
         shaders = false
     }
-    kotlinOptions {
-        useIR = true
-    }
     composeOptions {
         kotlinCompilerExtensionVersion = kotlinComposeVersion
     }
 }
 
 dependencies {
+    implementation("androidx.activity:activity-compose:$kotlinComposeVersion")
     implementation("androidx.compose.foundation:foundation:$kotlinComposeVersion")
     implementation("androidx.compose.material:material:$kotlinComposeVersion")
     implementation("androidx.compose.ui:ui-tooling:$kotlinComposeVersion")
