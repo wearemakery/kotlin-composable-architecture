@@ -19,7 +19,7 @@ android {
 }
 
 dependencies {
-    implementation("androidx.activity:activity-compose:$kotlinComposeVersion")
+    implementation("androidx.activity:activity-compose:$androidxActivityVersion")
     implementation("androidx.compose.foundation:foundation:$kotlinComposeVersion")
     implementation("androidx.compose.material:material:$kotlinComposeVersion")
     implementation("androidx.compose.ui:ui-tooling:$kotlinComposeVersion")
