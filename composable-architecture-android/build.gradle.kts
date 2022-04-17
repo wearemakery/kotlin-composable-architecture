@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    compileSdkVersion(androidCompileSdkVersion)
+    compileSdk = androidCompileSdkVersion
     sourceSets["main"].java.srcDir("src/main/kotlin")
 }
 
